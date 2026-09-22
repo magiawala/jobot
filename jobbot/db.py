@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   department TEXT,
   employment_type TEXT,
   active INTEGER DEFAULT 1,
+  duplicate_of_job_id INTEGER REFERENCES jobs(id),
   UNIQUE(source_ats, board_token, external_id)
 );
 CREATE INDEX IF NOT EXISTS idx_jobs_first_seen ON jobs(first_seen_at);
@@ -145,11 +146,25 @@ CREATE TABLE IF NOT EXISTS board_probes (
   slug TEXT NOT NULL, ats TEXT NOT NULL, ok INTEGER, probed_at TEXT NOT NULL,
   PRIMARY KEY (slug, ats)
 );
+
+CREATE TABLE IF NOT EXISTS company_stats (
+  ats TEXT NOT NULL, board_token TEXT NOT NULL,
+  total_postings INTEGER NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (ats, board_token)
+);
 """
 
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Additive, idempotent migrations for columns added after a DB already existed."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(jobs)")}
+    if "duplicate_of_job_id" not in cols:
+        conn.execute("ALTER TABLE jobs ADD COLUMN duplicate_of_job_id INTEGER REFERENCES jobs(id)")
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
@@ -158,6 +173,7 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
 
 
@@ -224,7 +240,8 @@ def get_job(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
 
 def unscored_jobs(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     return conn.execute(
-        "SELECT j.* FROM jobs j LEFT JOIN scores s ON s.job_id=j.id WHERE s.job_id IS NULL AND j.active=1 ORDER BY j.first_seen_at DESC"
+        "SELECT j.* FROM jobs j LEFT JOIN scores s ON s.job_id=j.id "
+        "WHERE s.job_id IS NULL AND j.active=1 AND j.duplicate_of_job_id IS NULL ORDER BY j.first_seen_at DESC"
     ).fetchall()
 
 
@@ -303,6 +320,22 @@ def add_check_manually(conn: sqlite3.Connection, source: str, company: str | Non
     cur = conn.execute("INSERT OR IGNORE INTO check_manually (source,company,title,url,reason,seen_at) VALUES (?,?,?,?,?,?)",
                        (source, company, title, url, reason, now_iso()))
     return cur.rowcount > 0
+
+
+def upsert_company_stats(conn: sqlite3.Connection, ats: str, board_token: str, total_postings: int) -> None:
+    """Total open postings on a company's board - a free, real-time proxy for company size/activity
+    (no LinkedIn scraping, no paid data). Used by the tailoring-priority ranking in Phase 3."""
+    conn.execute(
+        "INSERT INTO company_stats (ats, board_token, total_postings, updated_at) VALUES (?,?,?,?) "
+        "ON CONFLICT(ats, board_token) DO UPDATE SET total_postings=excluded.total_postings, updated_at=excluded.updated_at",
+        (ats, board_token.lower(), total_postings, now_iso()),
+    )
+
+
+def company_size(conn: sqlite3.Connection, ats: str, board_token: str) -> int:
+    row = conn.execute("SELECT total_postings FROM company_stats WHERE ats=? AND board_token=?",
+                       (ats, board_token.lower())).fetchone()
+    return row["total_postings"] if row else 0
 
 
 def apps_today(conn: sqlite3.Connection, statuses: tuple[str, ...] = ("submitted", "filled_awaiting_review")) -> int:

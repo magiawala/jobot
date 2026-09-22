@@ -43,7 +43,8 @@ def discover(
     console.print(
         f"\n[bold]Discovery:[/] {c['boards']} boards ok, {c['boards_failed']} failed | "
         f"{c['fetched']} postings fetched, {c['relevant']} design-related | "
-        f"[green]{c['new']} new[/], {c['updated']} updated, {c['deactivated']} closed | {c['seconds']}s"
+        f"[green]{c['new']} new[/], {c['updated']} updated, {c['deactivated']} closed | "
+        f"{c.get('duplicates_marked', 0)} duplicate postings merged into {c.get('duplicate_groups', 0)} groups | {c['seconds']}s"
     )
     for e in res["errors"]:
         console.print(f"  [red]error:[/] {e}")
@@ -70,6 +71,18 @@ def _print_job(j: dict) -> None:
     )
 
 
+@app.command()
+def dedupe() -> None:
+    """Re-run duplicate-posting detection (same company+title+near-identical description,
+    filed as separate per-location postings). Runs automatically after every discover too."""
+    from .dedupe import run_dedupe
+
+    with db.session() as conn:
+        res = run_dedupe(conn)
+        conn.commit()
+    console.print(f"[bold]Dedupe:[/] merged {res['jobs_marked_duplicate']} duplicate postings into {res['groups_merged']} groups")
+
+
 @app.command("find-board")
 def find_board_cmd(url_or_name: str = typer.Argument(..., help="Careers page URL or a company name."),
                    no_browser: bool = typer.Option(False, "--no-browser")) -> None:
@@ -86,12 +99,12 @@ def find_board_cmd(url_or_name: str = typer.Argument(..., help="Careers page URL
 
 
 @app.command()
-def jobs(limit: int = 20, all_jobs: bool = typer.Option(False, "--all")) -> None:
-    """List recently discovered jobs."""
+def jobs(limit: int = 20, all_jobs: bool = typer.Option(False, "--all", help="Include closed and duplicate postings.")) -> None:
+    """List recently discovered jobs (duplicates hidden by default)."""
     with db.session() as conn:
         q = "SELECT j.*, s.total, s.tier FROM jobs j LEFT JOIN scores s ON s.job_id=j.id"
         if not all_jobs:
-            q += " WHERE j.active=1"
+            q += " WHERE j.active=1 AND j.duplicate_of_job_id IS NULL"
         rows = conn.execute(q + " ORDER BY j.first_seen_at DESC LIMIT ?", (limit,)).fetchall()
     t = Table(box=box.SIMPLE_HEAD)
     for col in ("id", "company", "title", "location", "salary", "score", "tier", "seen"):
@@ -155,14 +168,15 @@ def status() -> None:
     with db.session() as conn:
         last = conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT 1").fetchone()
         n_jobs = conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
-        n_active = conn.execute("SELECT COUNT(*) FROM jobs WHERE active=1").fetchone()[0]
+        n_active = conn.execute("SELECT COUNT(*) FROM jobs WHERE active=1 AND duplicate_of_job_id IS NULL").fetchone()[0]
+        n_dupes = conn.execute("SELECT COUNT(*) FROM jobs WHERE duplicate_of_job_id IS NOT NULL").fetchone()[0]
         n_scored = conn.execute("SELECT COUNT(*) FROM scores").fetchone()[0]
         tiers = conn.execute("SELECT tier, COUNT(*) c FROM scores GROUP BY tier").fetchall()
         apps = conn.execute("SELECT status, COUNT(*) c FROM applications GROUP BY status").fetchall()
         calls = db.claude_calls_today(conn)
     console.print(f"[bold]OS:[/] {config.detect_os()}   [bold]mode:[/] {config.mode()}")
     console.print(f"[bold]last run:[/] {dict(last) if last else 'never'}")
-    console.print(f"[bold]jobs:[/] {n_jobs} total, {n_active} active, {n_scored} scored  " + " ".join(f"{t['tier']}={t['c']}" for t in tiers))
+    console.print(f"[bold]jobs:[/] {n_jobs} total, {n_active} active ({n_dupes} duplicates hidden), {n_scored} scored  " + " ".join(f"{t['tier']}={t['c']}" for t in tiers))
     console.print(f"[bold]applications:[/] " + (" ".join(f"{a['status']}={a['c']}" for a in apps) or "none"))
     console.print(f"[bold]claude calls today:[/] {calls}/{config.limits()['max_claude_calls_per_day']}   [bold]claude cli:[/] {check_cli()}")
     from .scheduler import schedule_status

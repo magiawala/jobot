@@ -78,6 +78,7 @@ def run_discovery(only: list[str] | None = None, progress: Callable[[str], None]
                 jobs = jobs or []
                 counts["boards"] += 1
                 counts["fetched"] += len(jobs)
+                db.upsert_company_stats(conn, c["ats"], c["board_token"], len(jobs))
                 relevant = [j for j in jobs if tf.search(j.title)]
                 counts["relevant"] += len(relevant)
                 seen: set[str] = set()
@@ -92,6 +93,10 @@ def run_discovery(only: list[str] | None = None, progress: Callable[[str], None]
                 counts["deactivated"] += db.mark_inactive_missing(conn, c["ats"], c["board_token"], seen)
                 if progress:
                     progress(f"{name}: {len(jobs)} jobs, {len(relevant)} design-related")
+        from ..dedupe import run_dedupe
+        dedupe_result = run_dedupe(conn)
+        counts["duplicate_groups"] = dedupe_result["groups_merged"]
+        counts["duplicates_marked"] = dedupe_result["jobs_marked_duplicate"]
         conn.commit()
     counts["seconds"] = round(time.time() - started, 1)
     return {"counts": counts, "new_ids": new_ids, "errors": errors}
