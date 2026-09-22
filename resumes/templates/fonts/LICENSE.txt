@@ -1,0 +1,7 @@
+Poppins font family (Regular, Medium, SemiBold, Bold), by Indian Type Foundry.
+Source: Google Fonts (https://fonts.google.com/specimen/Poppins)
+Licensed under the SIL Open Font License, Version 1.1 - free to bundle and redistribute.
+Full license: https://openfontlicense.org
+
+Bundled here (rather than loaded from a CDN) so resume rendering works fully offline and
+doesn't depend on Google Fonts' availability.
