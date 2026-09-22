@@ -161,6 +161,98 @@ def score(explain: bool = typer.Option(False, "--explain", help="Print the top 1
             console.print(f"    [dim]- {r}[/]")
 
 
+@app.command("apply")
+def apply_cmd(
+    job_id: int = typer.Argument(..., help="Job id from `jobbot jobs`."),
+    mode: Optional[str] = typer.Option(None, help="DRY_RUN | REVIEW | AUTO (defaults to search.yaml)."),
+    headed: bool = typer.Option(False, "--headed", help="Show the browser (debugging)."),
+) -> None:
+    """Fill one job's application form. DRY_RUN and REVIEW never click submit."""
+    from .apply import apply_one
+
+    res = apply_one(job_id, mode=mode, headed=headed)
+    color = {"submitted": "green", "filled_awaiting_review": "cyan", "needs_human": "yellow",
+             "failed": "red", "skipped": "dim"}.get(res.status, "white")
+    console.print(f"[bold {color}]{res.status}[/] job #{job_id}")
+    if res.error:
+        console.print(f"  [red]{res.error}[/]")
+    if res.filled:
+        console.print(f"  [bold]filled {len(res.filled)} field(s):[/]")
+        for k, v in res.filled.items():
+            console.print(f"    [dim]{k}[/] = {str(v)[:70]}")
+    for u in res.unanswered:
+        console.print(f"  [yellow]unanswered[/] {u}")
+    if res.screenshot_path:
+        console.print(f"  [dim]screenshot: {res.screenshot_path}[/]")
+
+
+@app.command()
+def review() -> None:
+    """List applications filled and waiting for your approval."""
+    with db.session() as conn:
+        rows = conn.execute(
+            """SELECT a.id, a.job_id, a.status, a.screenshot_path, a.filled_answers, a.last_error,
+                      j.company, j.title, j.url, s.total
+               FROM applications a JOIN jobs j ON j.id=a.job_id
+               LEFT JOIN scores s ON s.job_id=j.id
+               WHERE a.status IN ('filled_awaiting_review','needs_human')
+               ORDER BY s.total DESC"""
+        ).fetchall()
+    if not rows:
+        console.print("Nothing awaiting review.")
+        return
+    for r in rows:
+        tag = "[cyan]awaiting review[/]" if r["status"] == "filled_awaiting_review" else "[yellow]needs human[/]"
+        console.print(f"\n{tag} [bold]app #{r['id']}[/] (job #{r['job_id']}, score {r['total']})")
+        console.print(f"  [bold]{r['title']}[/] @ {r['company']}")
+        console.print(f"  {r['url']}")
+        if r["last_error"]:
+            console.print(f"  [red]{r['last_error']}[/]")
+        if r["filled_answers"]:
+            data = json.loads(r["filled_answers"])
+            for u in data.get("unanswered", []):
+                console.print(f"  [yellow]unanswered[/] {u}")
+            console.print(f"  [dim]resume: {data.get('resume','?')}[/]")
+        if r["screenshot_path"]:
+            console.print(f"  [dim]screenshot: {r['screenshot_path']}[/]")
+    console.print("\n[dim]jobbot approve <id>   jobbot reject <id>[/]")
+
+
+@app.command()
+def approve(app_id: str = typer.Argument(..., help="Application id, or 'all'.")) -> None:
+    """Re-open a reviewed application and actually submit it."""
+    from .apply import apply_one
+
+    with db.session() as conn:
+        if app_id == "all":
+            rows = conn.execute("SELECT id, job_id FROM applications WHERE status='filled_awaiting_review'").fetchall()
+        else:
+            rows = conn.execute("SELECT id, job_id FROM applications WHERE id=? AND status='filled_awaiting_review'",
+                               (int(app_id),)).fetchall()
+    if not rows:
+        console.print("[yellow]Nothing to approve with that id.[/]")
+        raise typer.Exit(1)
+
+    for r in rows:
+        console.print(f"Submitting application #{r['id']} (job #{r['job_id']})...")
+        res = apply_one(r["job_id"], allow_submit=True)
+        color = "green" if res.status == "submitted" else "red"
+        console.print(f"  [bold {color}]{res.status}[/]" + (f" - {res.error}" if res.error else ""))
+
+
+@app.command()
+def reject(app_id: int = typer.Argument(..., help="Application id to skip.")) -> None:
+    """Mark a reviewed application as skipped - it won't be submitted or retried."""
+    with db.session() as conn:
+        row = conn.execute("SELECT id FROM applications WHERE id=?", (app_id,)).fetchone()
+        if not row:
+            console.print("[yellow]No such application.[/]")
+            raise typer.Exit(1)
+        db.update_application(conn, app_id, status="skipped", last_error="rejected by user")
+        conn.commit()
+    console.print(f"[dim]Application #{app_id} marked skipped.[/]")
+
+
 @app.command()
 def status() -> None:
     """Last run, today's counts, Claude CLI reachability."""
