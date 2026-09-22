@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ contact.name }} - Resume</title>
+<style>
+  @page { size: Letter; margin: 0.3in 0.55in; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9.6pt;
+    line-height: 1.21;
+    color: #1a1a1a;
+    margin: 0;
+  }
+  header { text-align: center; margin-bottom: 5px; }
+  h1.name { font-size: 16.5pt; font-weight: 700; letter-spacing: 0.3px; margin: 0 0 2px 0; }
+  .contact-line { font-size: 8.6pt; color: #333; }
+  .contact-line a { color: #333; text-decoration: none; }
+  .contact-line span.sep { color: #999; margin: 0 5px; }
+
+  section { margin-top: 5px; }
+  h2.section-title {
+    font-size: 9.8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+    border-bottom: 1.1px solid #1a1a1a; padding-bottom: 1px; margin: 0 0 3px 0;
+  }
+  p.summary { margin: 0; text-align: left; }
+
+  .entry { margin-bottom: 5px; }
+  .entry:last-child { margin-bottom: 0; }
+  .entry-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .entry-org { font-weight: 700; font-size: 10pt; }
+  .entry-dates { font-size: 8.7pt; color: #444; white-space: nowrap; }
+  .entry-subhead { display: flex; justify-content: space-between; align-items: baseline; font-style: italic; color: #222; font-size: 9.4pt; }
+  ul.bullets { margin: 2px 0 0 0; padding-left: 15px; }
+  ul.bullets li { margin-bottom: 1px; }
+
+  .edu-entry { margin-bottom: 3px; }
+  .edu-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .edu-school { font-weight: 700; }
+  .edu-degree { font-style: italic; font-size: 9.8pt; }
+  .coursework { font-size: 8.8pt; color: #444; }
+
+  .skills-grid p { margin: 2px 0; }
+  .skills-grid .cat { font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 class="name">{{ contact.name }}</h1>
+  <div class="contact-line">
+    {{ contact.location }}<span class="sep">|</span>{{ contact.phone }}<span class="sep">|</span>{{ contact.email }}
+    {% if contact.linkedin %}<span class="sep">|</span>{{ contact.linkedin }}{% endif %}
+    {% if contact.portfolio %}<span class="sep">|</span>{{ contact.portfolio }}{% endif %}
+  </div>
+</header>
+
+{% if summary %}
+<section>
+  <h2 class="section-title">Summary</h2>
+  <p class="summary">{{ summary }}</p>
+</section>
+{% endif %}
+
+<section>
+  <h2 class="section-title">Experience</h2>
+  {% for e in experience %}
+  <div class="entry">
+    <div class="entry-head">
+      <span class="entry-org">{{ e.company }}{% if e.location %} — {{ e.location }}{% endif %}</span>
+      <span class="entry-dates">{{ e.start_date }} – {{ e.end_date }}</span>
+    </div>
+    <div class="entry-subhead"><span>{{ e.title }}</span></div>
+    {% if e.bullets %}
+    <ul class="bullets">
+      {% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+</section>
+
+<section>
+  <h2 class="section-title">Education</h2>
+  {% for ed in education %}
+  <div class="edu-entry">
+    <div class="edu-head">
+      <span class="edu-school">{{ ed.school }}</span>
+      {% if ed.dates %}<span class="entry-dates">{{ ed.dates }}</span>{% endif %}
+    </div>
+    <div class="edu-degree">{{ ed.degree }}</div>
+    {% if ed.coursework %}<div class="coursework">Relevant coursework: {{ ed.coursework|join(', ') }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</section>
+
+<section>
+  <h2 class="section-title">Skills</h2>
+  <div class="skills-grid">
+    {% for cat, items in skills.items() %}
+    <p><span class="cat">{{ cat }}:</span> {{ items|join(', ') }}</p>
+    {% endfor %}
+  </div>
+</section>
+
+</body>
+</html>

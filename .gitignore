@@ -5,9 +5,12 @@ Master Resume/
 bookmarks_*.html
 resumes/*.json
 resumes/*.md
+resumes/*.pdf
+resumes/*.docx
 resumes/variants/
 resumes/tailored/
 resumes/extracted/
+# resumes/templates/ IS tracked - it's just markup, no personal data
 
 # runtime state
 .venv/
