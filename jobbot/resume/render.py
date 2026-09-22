@@ -15,6 +15,8 @@ from typing import Any
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
+from docx.oxml.ns import qn
+from docx.oxml.shared import OxmlElement
 from docx.shared import Pt, RGBColor
 from jinja2 import Environment, FileSystemLoader
 from playwright.sync_api import sync_playwright
@@ -66,6 +68,38 @@ _ACCENT = RGBColor(0x1A, 0x1A, 0x1A)
 _MUTED = RGBColor(0x44, 0x44, 0x44)
 
 
+def add_hyperlink(paragraph, url: str, text: str, size_pt: float | None = None, bold: bool = False) -> None:
+    """python-docx has no built-in hyperlink support - this is the standard low-level pattern:
+    register the URL as an external relationship, then build the <w:hyperlink> run by hand.
+    Styled black + no underline (not Word's default blue-underline) per Devanshu's request."""
+    part = paragraph.part
+    r_id = part.relate_to(url, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+                          is_external=True)
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), r_id)
+
+    run = OxmlElement("w:r")
+    rPr = OxmlElement("w:rPr")
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), "1A1A1A")
+    rPr.append(color)
+    u = OxmlElement("w:u")
+    u.set(qn("w:val"), "none")
+    rPr.append(u)
+    if bold:
+        rPr.append(OxmlElement("w:b"))
+    if size_pt:
+        sz = OxmlElement("w:sz")
+        sz.set(qn("w:val"), str(int(size_pt * 2)))
+        rPr.append(sz)
+    run.append(rPr)
+    t = OxmlElement("w:t")
+    t.text = text
+    run.append(t)
+    hyperlink.append(run)
+    paragraph._p.append(hyperlink)
+
+
 def _section_heading(doc: Document, text: str) -> None:
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(10)
@@ -110,9 +144,12 @@ def render_docx(resume: dict[str, Any], out_path: Path) -> Path:
 
     links_p = name_cell.add_paragraph()
     links_p.paragraph_format.space_before = Pt(2)
-    links_text = " | ".join(b for b in (contact.get("linkedin"), contact.get("portfolio")) if b)
-    links_run = links_p.add_run(links_text)
-    links_run.font.size = Pt(9)
+    if contact.get("linkedin"):
+        add_hyperlink(links_p, f"https://{contact['linkedin']}", contact["linkedin"], size_pt=9)
+    if contact.get("linkedin") and contact.get("portfolio"):
+        links_p.add_run(" | ").font.size = Pt(9)
+    if contact.get("portfolio"):
+        add_hyperlink(links_p, f"https://{contact['portfolio']}", contact["portfolio"], size_pt=9)
 
     loc_cell = header.cell(0, 1)
     loc_p = loc_cell.paragraphs[0]
@@ -124,9 +161,13 @@ def render_docx(resume: dict[str, Any], out_path: Path) -> Path:
     contact2_p = loc_cell.add_paragraph()
     contact2_p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     contact2_p.paragraph_format.space_before = Pt(2)
-    contact2_text = " | ".join(b for b in (contact.get("email"), contact.get("phone")) if b)
-    contact2_run = contact2_p.add_run(contact2_text)
-    contact2_run.font.size = Pt(9)
+    if contact.get("email"):
+        add_hyperlink(contact2_p, f"mailto:{contact['email']}", contact["email"], size_pt=9)
+    if contact.get("email") and contact.get("phone"):
+        contact2_p.add_run(" | ").font.size = Pt(9)
+    if contact.get("phone"):
+        tel = "+1" + "".join(c for c in contact["phone"] if c.isdigit())
+        add_hyperlink(contact2_p, f"tel:{tel}", contact["phone"], size_pt=9)
 
     if resume.get("summary"):
         _section_heading(doc, "Summary")

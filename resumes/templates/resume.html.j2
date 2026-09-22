@@ -50,6 +50,8 @@
   .edu-head .degree { font-weight: 400; }
   .coursework { font-size: 8.6pt; color: #333; margin-top: 1px; }
   .skill-cat { font-weight: 600; }
+
+  a { color: inherit; text-decoration: none; }
 </style>
 </head>
 <body>
@@ -57,11 +59,19 @@
 <header>
   <div>
     <h1 class="name">{{ contact.name|upper }}</h1>
-    <div class="header-links">{{ contact.linkedin }}{% if contact.portfolio %} | {{ contact.portfolio }}{% endif %}</div>
+    <div class="header-links">
+      {%- if contact.linkedin %}<a href="https://{{ contact.linkedin }}">{{ contact.linkedin }}</a>{% endif -%}
+      {%- if contact.linkedin and contact.portfolio %} | {% endif -%}
+      {%- if contact.portfolio %}<a href="https://{{ contact.portfolio }}">{{ contact.portfolio }}</a>{% endif -%}
+    </div>
   </div>
   <div class="header-right">
     <div class="loc">{{ contact.location }}</div>
-    <div class="contact-2">{{ contact.email }}{% if contact.phone %} | {{ contact.phone }}{% endif %}</div>
+    <div class="contact-2">
+      {%- if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% endif -%}
+      {%- if contact.email and contact.phone %} | {% endif -%}
+      {%- if contact.phone %}<a href="tel:+1{{ contact.phone|replace('(','')|replace(')','')|replace(' ','')|replace('-','') }}">{{ contact.phone }}</a>{% endif -%}
+    </div>
   </div>
 </header>
 
