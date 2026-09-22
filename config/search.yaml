@@ -1,0 +1,48 @@
+roles:
+  product_design:
+    titles_exact: ["Product Designer", "Senior Product Designer", "Product Design Lead"]
+    titles_related: ["Interaction Designer", "Digital Product Designer", "Product Designer II", "Designer, Product"]
+  design_engineer:
+    titles_exact: ["Design Engineer", "UX Engineer", "Design Technologist"]
+    titles_related: ["Frontend Engineer, Design Systems", "Creative Technologist", "UI Engineer", "Design Systems Engineer", "Front End Engineer, Design"]
+  ux_design:
+    titles_exact: ["UX Designer", "UX/UI Designer", "User Experience Designer"]
+    titles_related: ["UI Designer", "Experience Designer", "UI/UX Designer", "Product Designer, UX"]
+
+title_blocklist: ["Intern", "Graphic Designer", "Instructional Designer", "Interior", "Fashion",
+                  "Mechanical", "Electrical", "Hardware", "Civil", "Structural", "Industrial Designer",
+                  "Sound Designer", "Game Designer", "Level Designer", "Learning Designer",
+                  "Motion Designer", "Brand Designer", "Visual Designer", "Marketing Designer",
+                  "Design Manager", "Design Director", "Design Researcher", "Content Designer",
+                  "Optical", "Chip", "ASIC", "RTL", "Analog", "Verification", "Design Project Manager"]
+
+seniority:
+  target: mid
+  allowed_title_words: []            # plain titles, e.g. "Product Designer", count as mid
+  soft_title_words: ["Senior", "Sr", "Sr."]   # allowed but scored lower; set to [] to skip Senior roles
+  blocked_title_words: ["Intern", "Internship", "Junior", "Jr", "Jr.", "Entry", "Associate", "Apprentice",
+                        "Staff", "Principal", "Lead", "Head of", "Manager", "Director", "VP",
+                        "Vice President", "Chief", "Founding", "Fellow", "New Grad", "Graduate"]
+  years_required: { min_ok: 2, max_ok: 6 }   # "0-1 years" or "8+ years" fail the gate
+
+salary:
+  currency: USD
+  target_min: 130000
+  target_max: 200000
+  hourly_to_annual_hours: 2080
+  if_unlisted: allow_with_penalty    # allow_with_penalty | skip
+  unlisted_penalty: 10
+
+locations:
+  country: US                 # hard requirement, US only
+  remote_us_ok: true          # remote roles count only if open to US-based candidates
+  cities: []                  # optional preferred US cities (bonus points, not a filter)
+  # Skip: non-US locations, "remote" limited to other countries/regions (e.g. "Remote - EMEA",
+  # "Remote (Canada)", "UK only"), and postings requiring residence outside the US.
+
+thresholds: { skip_below: 50, tailor_at_or_above: 75 }
+limits: { max_tailors_per_day: 10, max_apps_per_run: 5, max_apps_per_day: 30, max_claude_calls_per_day: 25 }
+mode: REVIEW        # DRY_RUN | REVIEW | AUTO
+report_time: "20:00"
+tailor_batch_hours: [9, 13, 17]
+no_response_days: 21

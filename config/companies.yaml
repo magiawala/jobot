@@ -1,0 +1,151 @@
+# Company job boards. Each entry: name, ats (greenhouse | lever | ashby), board_token.
+# Optional: favorite: true (+10), dream: true (+15, always held for review), source: auto (added by the resolver).
+# All tokens below were verified live on 2026-09-21. Add your own; `jobbot find-board <careers url>` detects tokens.
+
+companies:
+  # ---------- Greenhouse ----------
+  - { name: Stripe,        ats: greenhouse, board_token: stripe }
+  - { name: Figma,         ats: greenhouse, board_token: figma, dream: true }
+  - { name: Robinhood,     ats: greenhouse, board_token: robinhood }
+  - { name: Instacart,     ats: greenhouse, board_token: instacart }
+  - { name: Oscar Health,  ats: greenhouse, board_token: oscar }
+  - { name: Duolingo,      ats: greenhouse, board_token: duolingo, favorite: true }
+  - { name: Bitwarden,     ats: greenhouse, board_token: bitwarden }
+  - { name: Airbnb,        ats: greenhouse, board_token: airbnb }
+  - { name: Coinbase,      ats: greenhouse, board_token: coinbase }
+  - { name: Vercel,        ats: greenhouse, board_token: vercel, favorite: true }
+  - { name: Webflow,       ats: greenhouse, board_token: webflow }
+  - { name: Discord,       ats: greenhouse, board_token: discord }
+  - { name: Asana,         ats: greenhouse, board_token: asana }
+  - { name: Cloudflare,    ats: greenhouse, board_token: cloudflare }
+  - { name: Reddit,        ats: greenhouse, board_token: reddit }
+  - { name: Pinterest,     ats: greenhouse, board_token: pinterest }
+  - { name: Brex,          ats: greenhouse, board_token: brex }
+  - { name: Affirm,        ats: greenhouse, board_token: affirm }
+  - { name: Chime,         ats: greenhouse, board_token: chime }
+  - { name: Lyft,          ats: greenhouse, board_token: lyft }
+  - { name: Databricks,    ats: greenhouse, board_token: databricks }
+  - { name: Datadog,       ats: greenhouse, board_token: datadog }
+  - { name: Okta,          ats: greenhouse, board_token: okta }
+  - { name: HubSpot,       ats: greenhouse, board_token: hubspot }
+  - { name: Squarespace,   ats: greenhouse, board_token: squarespace }
+  - { name: Peloton,       ats: greenhouse, board_token: peloton }
+  - { name: Gusto,         ats: greenhouse, board_token: gusto }
+  - { name: Samsara,       ats: greenhouse, board_token: samsara }
+  - { name: Faire,         ats: greenhouse, board_token: faire }
+  - { name: Nuro,          ats: greenhouse, board_token: nuro }
+  - { name: Scale AI,      ats: greenhouse, board_token: scaleai }
+  - { name: Checkr,        ats: greenhouse, board_token: checkr }
+  - { name: Airtable,      ats: greenhouse, board_token: airtable }
+  - { name: Mixpanel,      ats: greenhouse, board_token: mixpanel }
+  - { name: Klaviyo,       ats: greenhouse, board_token: klaviyo }
+  - { name: Current,       ats: greenhouse, board_token: current }
+  - { name: Calm,          ats: greenhouse, board_token: calm }
+  - { name: Oura,          ats: greenhouse, board_token: oura }
+  - { name: Epic Games,    ats: greenhouse, board_token: epicgames }
+  - { name: Roblox,        ats: greenhouse, board_token: roblox }
+  - { name: Twitch,        ats: greenhouse, board_token: twitch }
+  - { name: Justworks,     ats: greenhouse, board_token: justworks }
+  - { name: Mercury,       ats: greenhouse, board_token: mercury }
+  - { name: Waymo,         ats: greenhouse, board_token: waymo }
+  - { name: Anthropic,     ats: greenhouse, board_token: anthropic }
+  - { name: Duda,          ats: greenhouse, board_token: duda }
+  - { name: Intercom,      ats: greenhouse, board_token: intercom }
+  - { name: Toast,         ats: greenhouse, board_token: toast }
+  - { name: GitLab,        ats: greenhouse, board_token: gitlab }
+  - { name: Dropbox,       ats: greenhouse, board_token: dropbox }
+  - { name: MongoDB,       ats: greenhouse, board_token: mongodb }
+  - { name: Twilio,        ats: greenhouse, board_token: twilio }
+  - { name: Carta,         ats: greenhouse, board_token: carta }
+  - { name: Flexport,      ats: greenhouse, board_token: flexport }
+  - { name: Lattice,       ats: greenhouse, board_token: lattice }
+  - { name: Amplitude,     ats: greenhouse, board_token: amplitude }
+  - { name: Braze,         ats: greenhouse, board_token: braze }
+  - { name: Attentive,     ats: greenhouse, board_token: attentive }
+  - { name: SoFi,          ats: greenhouse, board_token: sofi }
+  - { name: Upstart,       ats: greenhouse, board_token: upstart }
+  - { name: Betterment,    ats: greenhouse, board_token: betterment }
+  - { name: Coursera,      ats: greenhouse, board_token: coursera }
+  - { name: Khan Academy,  ats: greenhouse, board_token: khanacademy }
+  - { name: Tailscale,     ats: greenhouse, board_token: tailscale }
+  - { name: Netlify,       ats: greenhouse, board_token: netlify }
+  - { name: PlanetScale,   ats: greenhouse, board_token: planetscale }
+  - { name: Salesloft,     ats: greenhouse, board_token: salesloft }
+  - { name: Lithic,        ats: greenhouse, board_token: lithic }
+  - { name: Block,         ats: greenhouse, board_token: block }
+  - { name: Adyen,         ats: greenhouse, board_token: adyen }
+
+  # ---------- Lever ----------
+  - { name: Palantir,      ats: lever, board_token: palantir }
+  - { name: Aircall,       ats: lever, board_token: aircall }
+  - { name: Outreach,      ats: lever, board_token: outreach }
+  - { name: Spotify,       ats: lever, board_token: spotify, favorite: true }
+  - { name: Zoox,          ats: lever, board_token: zoox }
+  - { name: Veeva,         ats: lever, board_token: veeva }
+  - { name: Ro,            ats: lever, board_token: ro }
+  - { name: Kraken,        ats: lever, board_token: kraken }
+  - { name: Binance,       ats: lever, board_token: binance }
+  - { name: Anchorage Digital, ats: lever, board_token: anchorage }
+  - { name: Mistral AI,    ats: lever, board_token: mistral }
+  - { name: Clari,         ats: lever, board_token: clari }
+  - { name: Nium,          ats: lever, board_token: nium }
+
+  # ---------- Ashby ----------
+  - { name: Linear,        ats: ashby, board_token: linear, dream: true }
+  - { name: Ramp,          ats: ashby, board_token: ramp, favorite: true }
+  - { name: Notion,        ats: ashby, board_token: notion, dream: true }
+  - { name: Ashby,         ats: ashby, board_token: ashby }
+  - { name: OpenAI,        ats: ashby, board_token: openai }
+  - { name: Harvey,        ats: ashby, board_token: harvey }
+  - { name: Lovable,       ats: ashby, board_token: lovable }
+  - { name: Perplexity,    ats: ashby, board_token: perplexity }
+  - { name: Render,        ats: ashby, board_token: render }
+  - { name: Vanta,         ats: ashby, board_token: vanta }
+  - { name: Watershed,     ats: ashby, board_token: watershed }
+  - { name: Sierra,        ats: ashby, board_token: sierra }
+  - { name: ElevenLabs,    ats: ashby, board_token: elevenlabs }
+  - { name: Resend,        ats: ashby, board_token: resend }
+  - { name: Baseten,       ats: ashby, board_token: baseten }
+  - { name: Replit,        ats: ashby, board_token: replit }
+  - { name: Supabase,      ats: ashby, board_token: supabase }
+  - { name: Cursor,        ats: ashby, board_token: cursor, favorite: true }
+  - { name: Warp,          ats: ashby, board_token: warp }
+  - { name: Vapi,          ats: ashby, board_token: vapi }
+  - { name: Bland,         ats: ashby, board_token: bland }
+  - { name: Deepgram,      ats: ashby, board_token: deepgram }
+  - { name: Exa,           ats: ashby, board_token: exa }
+  - { name: Secureframe,   ats: ashby, board_token: secureframe }
+  - { name: Fireworks AI,  ats: ashby, board_token: fireworks }
+  - { name: LangChain,     ats: ashby, board_token: langchain }
+  - { name: Gamma,         ats: ashby, board_token: gamma }
+  - { name: PostHog,       ats: ashby, board_token: posthog }
+  - { name: Clerk,         ats: ashby, board_token: clerk }
+  - { name: Hex,           ats: ashby, board_token: hex }
+  - { name: Zapier,        ats: ashby, board_token: zapier }
+  - { name: Runway,        ats: ashby, board_token: runway }
+  - { name: Cohere,        ats: ashby, board_token: cohere }
+  - { name: Railway,       ats: ashby, board_token: railway }
+  - { name: Neon,          ats: ashby, board_token: neon }
+  - { name: Browserbase,   ats: ashby, board_token: browserbase }
+  - { name: Firecrawl,     ats: ashby, board_token: firecrawl }
+  - { name: Writer,        ats: ashby, board_token: writer }
+  - { name: Mintlify,      ats: ashby, board_token: mintlify }
+  - { name: Drata,         ats: ashby, board_token: drata }
+  - { name: Airbyte,       ats: ashby, board_token: airbyte }
+  - { name: Modal,         ats: ashby, board_token: modal }
+  - { name: Anyscale,      ats: ashby, board_token: anyscale }
+  - { name: Pinecone,      ats: ashby, board_token: pinecone }
+
+# Companies never to apply to (by name, case-insensitive).
+blocklist: []
+
+# Careers pages you check that are NOT on Greenhouse/Lever/Ashby. Logged in the report's "check manually" list.
+unsupported:
+  - { name: Apple,      url: "https://jobs.apple.com/en-us/search?team=design-SFTWR-DSGN" }
+  - { name: Google,     url: "https://www.google.com/about/careers/applications/jobs/results?q=%22product%20designer%22" }
+  - { name: Microsoft,  url: "https://jobs.careers.microsoft.com/global/en/search?q=product%20designer" }
+  - { name: Meta,       url: "https://www.metacareers.com/jobs?q=product%20designer" }
+  - { name: Netflix,    url: "https://explore.jobs.netflix.net/careers?query=product%20designer" }
+  - { name: Amazon,     url: "https://www.amazon.jobs/en/search?base_query=UX+designer" }
+  - { name: Adobe,      url: "https://careers.adobe.com/us/en/search-results?keywords=product%20designer" }
+  - { name: Uber,       url: "https://www.uber.com/us/en/careers/list/?query=product%20designer" }

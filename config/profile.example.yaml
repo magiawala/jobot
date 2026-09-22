@@ -1,0 +1,78 @@
+# Personal info + standard answers. FILL THIS IN. Nothing here is sent anywhere except into application forms.
+# Anything left as "TODO" blocks that field from being filled (the application goes to needs_human).
+
+name:
+  full: "First Last"
+  first: "First"
+  last: "Last"
+  preferred: "First"
+pronouns: ""                 # optional, e.g. "he/him"; left blank = not provided
+email: "you@example.com"
+phone: "TODO"                # US format, e.g. "+1 (555) 123-4567"
+location:
+  city: "TODO"
+  state: "TODO"              # 2-letter, e.g. "NY"
+  country: "United States"
+  zip: ""
+links:
+  linkedin: "TODO"
+  portfolio: "TODO"          # UTM tags are appended automatically per application
+  github: ""
+  personal_site: ""
+
+work_authorization:
+  authorized_in_us: true        # TODO confirm
+  needs_sponsorship_now: false  # TODO confirm
+  needs_sponsorship_future: false  # TODO confirm
+  visa_status_note: ""          # optional free text if a form asks
+
+preferences:
+  willing_to_relocate: true
+  work_setting: ["remote", "hybrid", "onsite"]   # in order of preference
+  earliest_start_date: "2 weeks"
+  notice_period: "2 weeks"
+  desired_salary_min: 130000
+  desired_salary_target: 160000
+
+standard_answers:
+  how_did_you_hear: "Company website"
+  years_experience_total: "TODO"           # e.g. "4"
+  years_experience_by_skill:
+    figma: "TODO"
+    prototyping: "TODO"
+    design_systems: "TODO"
+    user_research: "TODO"
+    frontend_react: "TODO"
+  highest_degree: "TODO"                   # e.g. "Master's"
+  school: "TODO"
+  graduation_year: "TODO"
+  field_of_study: "TODO"
+  previously_worked_here: "No"
+  related_to_employees: "No"
+  over_18: "Yes"
+  currently_employed: "TODO"               # "Yes" / "No"
+  can_work_in_office: "Yes"
+  non_compete: "No"
+  background_check_ok: "Yes"
+  drug_test_ok: "Yes"
+
+eeo:
+  # Default: decline to self-identify. Override any field with an explicit value if you want.
+  gender: "decline"
+  race_ethnicity: "decline"
+  hispanic_latino: "decline"
+  veteran_status: "decline"
+  disability_status: "decline"
+  sexual_orientation: "decline"
+  transgender: "decline"
+
+cover_letter_policy: skip_if_optional   # skip_if_optional | always | never
+cover_note_template: |
+  Hi {{company}} team,
+
+  I'm a product designer who builds as well as designs — comfortable moving from research and
+  flows to high-fidelity prototypes and production-ready front-end. I'm excited about the
+  {{title}} role because {{reason}}.
+
+  Thanks for your time,
+  {{first_name}}

@@ -1,0 +1,71 @@
+# Built from bookmarks_9_21_26.html ("Job Search" folder only). Non-US and internship-filtered links are disabled.
+# kind: linkedin_alert | aggregator | discovery | email_digest | disabled
+
+sources:
+  - id: linkedin_product_designer
+    name: "LinkedIn - New Roles 3 hours (Product Designer)"
+    kind: linkedin_alert
+    enabled: false          # never scraped; enable once LinkedIn job-alert emails are set up (email ingestion)
+    url: "https://www.linkedin.com/jobs/search/?distance=25&f_E=1%2C2%2C3&f_TPR=r7200&geoId=103644278&keywords=Product%20Designer"
+    note: "Bookmark uses f_E=1,2,3 (Internship/Entry/Associate). Alerts must use Mid-Senior level."
+
+  - id: linkedin_ux_designer
+    name: "LinkedIn - New Roles 6 hours (UX Designer)"
+    kind: linkedin_alert
+    enabled: false
+    url: "https://www.linkedin.com/jobs/search/?distance=25&f_E=1%2C2%2C3&f_TPR=r21600&geoId=103644278&keywords=UX%20Designer"
+    note: "Same as above."
+
+  - id: briansjobsearch
+    name: "Brian's Job Search"
+    kind: aggregator
+    enabled: true
+    url: "https://briansjobsearch.com/?job=Product+Designer&time=24hours"
+    queries: ["Product Designer", "UX Designer", "Design Engineer"]
+    tos_checked: false      # set by the pipeline after robots.txt / ToS check; see logs
+
+  - id: hiringcafe_us
+    name: "HiringCafe - US"
+    kind: aggregator
+    enabled: true
+    url: "https://hiring.cafe/?searchState=%7B%22searchQuery%22%3A%22ux+designer%22%7D"
+    queries: ["ux designer", "product designer", "design engineer"]
+    tos_checked: false
+
+  # HiringCafe UK / India / Singapore / Dubai: intentionally omitted (US only).
+
+  - id: ycombinator_designer
+    name: "Y Combinator jobs - designer"
+    kind: discovery
+    enabled: true
+    url: "https://www.ycombinator.com/jobs/role/designer"
+    note: "Resolve apply links to Greenhouse/Lever/Ashby; Work-at-a-Startup applies go to check-manually."
+
+  - id: wellfound
+    name: "Wellfound"
+    kind: email_digest
+    enabled: false
+    url: "https://wellfound.com/jobs"
+    note: "Applies happen inside Wellfound; discovery via email digests only."
+
+  - id: opendoors
+    name: "Open Doors"
+    kind: disabled
+    enabled: false
+    url: "https://www.opendoorscareers.com/?job=Internship&country=US"
+    note: "Bookmark is filtered to internships. Provide a mid-level link to enable."
+
+  - id: uiuxjobsboard
+    name: "UIUXjobsboard"
+    kind: disabled
+    enabled: false
+    url: "https://uiuxjobsboard.com/c/design-internships"
+    note: "Bookmark is filtered to internships. Provide a mid-level link to enable."
+
+# Email senders the IMAP reader is allowed to parse for job alerts (Phase 1b / 7).
+alert_senders:
+  - "jobs-noreply@linkedin.com"
+  - "jobalerts-noreply@linkedin.com"
+  - "team@wellfound.com"
+  - "no-reply@wellfound.com"
+  - "hello@hiring.cafe"

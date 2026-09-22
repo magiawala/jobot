@@ -1,0 +1,26 @@
+# secrets + personal data (never push these)
+.env
+config/profile.yaml
+Master Resume/
+bookmarks_*.html
+resumes/*.json
+resumes/*.md
+resumes/variants/
+resumes/tailored/
+resumes/extracted/
+
+# runtime state
+.venv/
+data/
+logs/
+screenshots/
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+
+# os
+.DS_Store
