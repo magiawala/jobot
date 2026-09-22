@@ -28,7 +28,7 @@ def setup(level: int = logging.INFO) -> None:
     ch.setLevel(level)
     root.addHandler(ch)
 
-    for noisy in ("httpx", "httpcore", "urllib3", "asyncio", "PIL", "matplotlib"):
+    for noisy in ("httpx", "httpcore", "urllib3", "asyncio", "PIL", "matplotlib", "pypdf", "pypdf._reader"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
