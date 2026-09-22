@@ -103,6 +103,51 @@ def jobs(limit: int = 20, all_jobs: bool = typer.Option(False, "--all")) -> None
     console.print(t)
 
 
+@app.command("ingest-yc")
+def ingest_yc() -> None:
+    """Phase 1b: fetch Y Combinator's public designer-jobs page, filter to US + salary range,
+    try to resolve each company to Greenhouse/Lever/Ashby, and log the rest to check-manually."""
+    from .ingest.aggregators import run_yc_ingest
+
+    res = run_yc_ingest()
+    if "error" in res:
+        console.print(f"[red]YC ingest failed:[/] {res['error']}")
+        raise typer.Exit(1)
+    if "skipped" in res:
+        console.print(f"[yellow]YC ingest skipped:[/] {res['skipped']}")
+        return
+    console.print(
+        f"[bold]YC ingest:[/] {res['listings']} listings | {res['us_candidates']} US+salary candidates | "
+        f"[green]{res['resolved_to_ats']} resolved to ATS[/] | {res['check_manually']} added to check-manually"
+    )
+
+
+@app.command()
+def score(explain: bool = typer.Option(False, "--explain", help="Print the top 15 new jobs with score breakdowns.")) -> None:
+    """Score every unscored job against search.yaml (hard gates + 0-100 scoring, no AI)."""
+    from .score import run_scoring
+
+    res = run_scoring(explain_top=15 if explain else 0)
+    c = res["counts"]
+    console.print(
+        f"[bold]Scoring:[/] {c['scored']} scored | "
+        f"[red]skip={c.get('skip',0)}[/] variant={c.get('variant',0)} "
+        f"[green]tailor={c.get('tailor',0)}[/] [magenta]dream_review={c.get('dream_review',0)}[/]"
+    )
+    for e in res["top"]:
+        j, s = e["job"], e["score"]
+        tier_color = {"skip": "red", "variant": "yellow", "tailor": "green", "dream_review": "magenta"}.get(s["tier"], "white")
+        console.print(
+            f"\n[bold cyan]#{j['id']}[/] [bold]{j['title']}[/] @ {j['company']}  "
+            f"[bold {tier_color}]{s['tier']}[/] total={s['total']} "
+            f"(title={s.get('title_pts','-')} skills={s.get('skills_pts','-')} sen={s.get('seniority_pts','-')} "
+            f"loc={s.get('location_pts','-')} co={s.get('company_bonus','-')} pen=-{s.get('penalty',0)}) "
+            f"role={s.get('role_bucket') or '-'}"
+        )
+        for r in s.get("reasons", []):
+            console.print(f"    [dim]- {r}[/]")
+
+
 @app.command()
 def status() -> None:
     """Last run, today's counts, Claude CLI reachability."""

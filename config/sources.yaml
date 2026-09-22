@@ -18,19 +18,32 @@ sources:
 
   - id: briansjobsearch
     name: "Brian's Job Search"
-    kind: aggregator
-    enabled: true
+    kind: not_a_data_source
+    enabled: false
     url: "https://briansjobsearch.com/?job=Product+Designer&time=24hours"
-    queries: ["Product Designer", "UX Designer", "Design Engineer"]
-    tos_checked: false      # set by the pipeline after robots.txt / ToS check; see logs
+    tos_checked: true
+    note: >
+      Checked 2026-09-21: this is not an aggregator with its own job data. It's a client-side
+      launcher that builds Google "site:greenhouse.io / site:ashbyhq.com / site:lever.co" search
+      queries and opens them in Google Search (confirmed via browser inspection - the "Start"
+      button's outputs are literally google.com/search links, no API). Automating Google Search
+      result scraping violates Google's ToS. Our own Common-Crawl-sourced board list in
+      companies.yaml (527 boards) achieves the same goal directly via each ATS's public JSON API,
+      which is more complete and doesn't touch Google at all. Retired rather than automated.
 
   - id: hiringcafe_us
     name: "HiringCafe - US"
     kind: aggregator
-    enabled: true
+    enabled: false
     url: "https://hiring.cafe/?searchState=%7B%22searchQuery%22%3A%22ux+designer%22%7D"
     queries: ["ux designer", "product designer", "design engineer"]
-    tos_checked: false
+    tos_checked: true
+    note: >
+      Checked 2026-09-21: hiringcafe.com/robots.txt explicitly disallows "/*?searchState=*" and
+      "/*?page=*" for all user-agents - exactly the bookmark's URL pattern. Per spec instruction
+      ("if automated access is prohibited or unclear, use the fallback"), this is NOT automated.
+      New listings go to the report's "check manually" list instead. Re-enable only if a robots.txt
+      change is confirmed, or a different (allowed) endpoint is identified.
 
   # HiringCafe UK / India / Singapore / Dubai: intentionally omitted (US only).
 

@@ -14,7 +14,10 @@ title_blocklist: ["Intern", "Graphic Designer", "Instructional Designer", "Inter
                   "Sound Designer", "Game Designer", "Level Designer", "Learning Designer",
                   "Motion Designer", "Brand Designer", "Visual Designer", "Marketing Designer",
                   "Design Manager", "Design Director", "Design Researcher", "Content Designer",
-                  "Optical", "Chip", "ASIC", "RTL", "Analog", "Verification", "Design Project Manager"]
+                  "Optical", "Chip", "ASIC", "RTL", "Analog", "Verification", "Design Project Manager",
+                  "Production Designer", "Production Design", "FPGA", "PCB", "RF Design", "RF Engineer",
+                  "Firmware", "Circuit", "Semiconductor", "Antenna", "Silicon", "Wire Harness", "Harness",
+                  "Set Designer", "Costume Designer", "Landscape Designer", "Floral Designer", "Jewelry Designer"]
 
 seniority:
   target: mid

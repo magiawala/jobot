@@ -136,6 +136,408 @@ companies:
   - { name: Anyscale,      ats: ashby, board_token: anyscale }
   - { name: Pinecone,      ats: ashby, board_token: pinecone }
 
+  # ---------- Auto-discovered via Common Crawl board-slug harvest + live-posting verification (2026-09-21) ----------
+  - { name: Bjakcareer, ats: ashby, board_token: bjakcareer, source: auto }
+  - { name: Airwallex, ats: ashby, board_token: airwallex, source: auto }
+  - { name: FeverUp, ats: greenhouse, board_token: feverup, source: auto }
+  - { name: Airapps, ats: ashby, board_token: airapps, source: auto }
+  - { name: DoorDash USA, ats: greenhouse, board_token: doordashusa, source: auto }
+  - { name: Neura Robotics Gmbh, ats: ashby, board_token: neura-robotics-gmbh, source: auto }
+  - { name: Alpacahealth, ats: ashby, board_token: alpacahealth, source: auto }
+  - { name: Crusoe, ats: ashby, board_token: crusoe, source: auto }
+  - { name: Snowflake, ats: ashby, board_token: snowflake, source: auto }
+  - { name: OKX, ats: greenhouse, board_token: okx, source: auto }
+  - { name: Applied, ats: ashby, board_token: applied, source: auto }
+  - { name: Legora, ats: ashby, board_token: legora, source: auto }
+  - { name: Clera, ats: ashby, board_token: clera, source: auto }
+  - { name: ATOMS Careers page, ats: greenhouse, board_token: cssmerge, source: auto }
+  - { name: Celonis, ats: greenhouse, board_token: celonis, source: auto }
+  - { name: Halter, ats: ashby, board_token: halter, source: auto }
+  - { name: Point72, ats: greenhouse, board_token: point72, source: auto }
+  - { name: Allarahealth, ats: ashby, board_token: allarahealth, source: auto }
+  - { name: iCapital, ats: greenhouse, board_token: icapitalnetwork, source: auto }
+  - { name: SharkNinja, ats: greenhouse, board_token: sharkninjaoperatingllc, source: auto }
+  - { name: Saronic, ats: ashby, board_token: saronic, source: auto }
+  - { name: DEPT®, ats: greenhouse, board_token: dept, source: auto }
+  - { name: PlayStation Global, ats: greenhouse, board_token: sonyinteractiveentertainmentglobal, source: auto }
+  - { name: Base Power, ats: ashby, board_token: base-power, source: auto }
+  - { name: Truelogic, ats: ashby, board_token: truelogic, source: auto }
+  - { name: Moniepoint, ats: greenhouse, board_token: moniepoint, source: auto }
+  - { name: Iceye, ats: ashby, board_token: iceye, source: auto }
+  - { name: Remote, ats: greenhouse, board_token: remotecom, source: auto }
+  - { name: Encora, ats: greenhouse, board_token: encora10, source: auto }
+  - { name: Scopely, ats: greenhouse, board_token: scopely, source: auto }
+  - { name: Checkout.Com, ats: ashby, board_token: checkout.com, source: auto }
+  - { name: The New York Times, ats: greenhouse, board_token: thenewyorktimes, source: auto }
+  - { name: Inter Carreiras, ats: greenhouse, board_token: inter, source: auto }
+  - { name: Lightspeedhq, ats: ashby, board_token: lightspeedhq, source: auto }
+  - { name: Whoop, ats: ashby, board_token: whoop, source: auto }
+  - { name: Pennylane, ats: ashby, board_token: pennylane, source: auto }
+  - { name: Sony Music Global Job Board, ats: greenhouse, board_token: sonymusicentertainment, source: auto }
+  - { name: Decagon, ats: ashby, board_token: decagon, source: auto }
+  - { name: Rivianvw.Tech, ats: ashby, board_token: rivianvw.tech, source: auto }
+  - { name: Quince, ats: greenhouse, board_token: quince, source: auto }
+  - { name: Redwood Materials, ats: greenhouse, board_token: redwoodmaterials, source: auto }
+  - { name: Maintainx, ats: ashby, board_token: maintainx, source: auto }
+  - { name: Skydio, ats: ashby, board_token: skydio, source: auto }
+  - { name: Clara, ats: greenhouse, board_token: clara, source: auto }
+  - { name: Jensen Hughes, ats: greenhouse, board_token: jensenhughes, source: auto }
+  - { name: Hasbro, ats: greenhouse, board_token: hasbro, source: auto }
+  - { name: 10Xteam, ats: ashby, board_token: 10xteam, source: auto }
+  - { name: Perk, ats: ashby, board_token: perk, source: auto }
+  - { name: "Re:Build Manufacturing", ats: greenhouse, board_token: rebuildmanufacturing, source: auto }
+  - { name: Teya, ats: ashby, board_token: teya, source: auto }
+  - { name: Nord Security, ats: ashby, board_token: nord-security, source: auto }
+  - { name: Zip, ats: ashby, board_token: zip, source: auto }
+  - { name: Judi Health, ats: greenhouse, board_token: judihealth, source: auto }
+  - { name: Gen Digital, ats: ashby, board_token: gen-digital, source: auto }
+  - { name: Hims And Hers, ats: ashby, board_token: hims-and-hers, source: auto }
+  - { name: Horizon3Ai, ats: ashby, board_token: horizon3ai, source: auto }
+  - { name: Plaid, ats: ashby, board_token: plaid, source: auto }
+  - { name: Alan, ats: ashby, board_token: alan, source: auto }
+  - { name: Apex Technology Inc, ats: ashby, board_token: apex-technology-inc, source: auto }
+  - { name: IonQ, ats: greenhouse, board_token: ionq, source: auto }
+  - { name: The Trade Desk, ats: greenhouse, board_token: thetradedesk, source: auto }
+  - { name: Diligent Corporation, ats: greenhouse, board_token: diligentcorporation, source: auto }
+  - { name: Lila Sciences, ats: greenhouse, board_token: lilasciences, source: auto }
+  - { name: Mercor, ats: ashby, board_token: mercor, source: auto }
+  - { name: Careers at Eucalyptus, ats: greenhouse, board_token: eucalyptus, source: auto }
+  - { name: Hirehangar, ats: ashby, board_token: hirehangar, source: auto }
+  - { name: OpenTable, ats: greenhouse, board_token: opentable, source: auto }
+  - { name: Etched, ats: ashby, board_token: etched, source: auto }
+  - { name: Figure, ats: greenhouse, board_token: figureai, source: auto }
+  - { name: Neko Health, ats: ashby, board_token: neko-health, source: auto }
+  - { name: Isar Aerospace SE, ats: greenhouse, board_token: isaraerospace, source: auto }
+  - { name: The Exploration Company, ats: ashby, board_token: the-exploration-company, source: auto }
+  - { name: Uipath, ats: ashby, board_token: uipath, source: auto }
+  - { name: 42Dot, ats: ashby, board_token: 42dot, source: auto }
+  - { name: Pear Vc, ats: ashby, board_token: pear-vc, source: auto }
+  - { name: Delinea, ats: ashby, board_token: delinea, source: auto }
+  - { name: Cresta, ats: greenhouse, board_token: cresta, source: auto }
+  - { name: Fashion Nova, ats: greenhouse, board_token: fashionnova, source: auto }
+  - { name: Smartsheet, ats: greenhouse, board_token: smartsheet, source: auto }
+  - { name: Cowboyspace, ats: ashby, board_token: cowboyspace, source: auto }
+  - { name: MrBeast, ats: greenhouse, board_token: mrbeastyoutube, source: auto }
+  - { name: Neros Technologies, ats: greenhouse, board_token: nerostechnologies, source: auto }
+  - { name: Geotab, ats: greenhouse, board_token: geotab, source: auto }
+  - { name: OneTrust, ats: greenhouse, board_token: onetrust, source: auto }
+  - { name: Metropolis, ats: greenhouse, board_token: metropolis, source: auto }
+  - { name: Engine, ats: greenhouse, board_token: engine, source: auto }
+  - { name: PayPay, ats: greenhouse, board_token: paypay, source: auto }
+  - { name: Rogo, ats: ashby, board_token: rogo, source: auto }
+  - { name: Oklo, ats: greenhouse, board_token: oklo, source: auto }
+  - { name: Ping Identity, ats: greenhouse, board_token: pingidentity, source: auto }
+  - { name: Careers at Tide, ats: greenhouse, board_token: tide, source: auto }
+  - { name: iFood, ats: greenhouse, board_token: ifoodcarreiras, source: auto }
+  - { name: Hightouch, ats: greenhouse, board_token: hightouch, source: auto }
+  - { name: Inversion, ats: greenhouse, board_token: inversionspace, source: auto }
+  - { name: Hinge Health, ats: ashby, board_token: hinge-health, source: auto }
+  - { name: Higgsfieldai, ats: ashby, board_token: higgsfieldai, source: auto }
+  - { name: "NeuraFlash, Part of Accenture", ats: greenhouse, board_token: neuraflash, source: auto }
+  - { name: Marianaminerals, ats: ashby, board_token: marianaminerals, source: auto }
+  - { name: Real Chemistry, ats: greenhouse, board_token: realchemistry, source: auto }
+  - { name: "Sotheby's", ats: greenhouse, board_token: sothebys, source: auto }
+  - { name: Kraken.Com, ats: ashby, board_token: kraken.com, source: auto }
+  - { name: Happyrobot.Ai, ats: ashby, board_token: happyrobot.ai, source: auto }
+  - { name: Profound, ats: ashby, board_token: profound, source: auto }
+  - { name: Giga Energy, ats: greenhouse, board_token: gigaenergy, source: auto }
+  - { name: Faculty, ats: ashby, board_token: faculty, source: auto }
+  - { name: Ethos Life, ats: greenhouse, board_token: ethoslife, source: auto }
+  - { name: Tripledot Studios, ats: greenhouse, board_token: tripledotstudios, source: auto }
+  - { name: Fonio, ats: ashby, board_token: fonio, source: auto }
+  - { name: Trading212, ats: ashby, board_token: trading212, source: auto }
+  - { name: Dialpad, ats: greenhouse, board_token: dialpad, source: auto }
+  - { name: ICON, ats: greenhouse, board_token: iconcareers, source: auto }
+  - { name: Handshake, ats: ashby, board_token: handshake, source: auto }
+  - { name: Suno, ats: ashby, board_token: suno, source: auto }
+  - { name: Samsung Semiconductor, ats: greenhouse, board_token: samsungsemiconductor, source: auto }
+  - { name: Sigma Computing, ats: greenhouse, board_token: sigmacomputing, source: auto }
+  - { name: Similarweb, ats: greenhouse, board_token: similarweb, source: auto }
+  - { name: Trexon, ats: greenhouse, board_token: tpcengineeringholdingsllc, source: auto }
+  - { name: Monzo, ats: greenhouse, board_token: monzo, source: auto }
+  - { name: Clover Health, ats: greenhouse, board_token: cloverhealth, source: auto }
+  - { name: "Fanatics Betting & Gaming", ats: greenhouse, board_token: fanaticsfbg, source: auto }
+  - { name: KRAFTON, ats: greenhouse, board_token: krafton, source: auto }
+  - { name: Levio, ats: greenhouse, board_token: levio, source: auto }
+  - { name: Proton, ats: greenhouse, board_token: proton, source: auto }
+  - { name: Nex, ats: greenhouse, board_token: nex, source: auto }
+  - { name: Sarvam, ats: ashby, board_token: sarvam, source: auto }
+  - { name: Claylabs, ats: ashby, board_token: claylabs, source: auto }
+  - { name: Range, ats: ashby, board_token: range, source: auto }
+  - { name: Tandem Health, ats: ashby, board_token: tandem-health, source: auto }
+  - { name: Openloophealth, ats: ashby, board_token: openloophealth, source: auto }
+  - { name: Reliable Robotics, ats: ashby, board_token: reliable-robotics, source: auto }
+  - { name: Rhoda Ai, ats: ashby, board_token: rhoda-ai, source: auto }
+  - { name: ON.energy, ats: greenhouse, board_token: onenergy, source: auto }
+  - { name: Onhires, ats: ashby, board_token: onhires, source: auto }
+  - { name: Voize, ats: ashby, board_token: voize, source: auto }
+  - { name: Hark, ats: greenhouse, board_token: hark, source: auto }
+  - { name: Tailor, ats: ashby, board_token: tailor, source: auto }
+  - { name: Gallup, ats: greenhouse, board_token: gallup, source: auto }
+  - { name: GetYourGuide, ats: greenhouse, board_token: getyourguide, source: auto }
+  - { name: Rho, ats: ashby, board_token: rho, source: auto }
+  - { name: NewsBreak, ats: greenhouse, board_token: newsbreak, source: auto }
+  - { name: Avelios Medical, ats: ashby, board_token: avelios-medical, source: auto }
+  - { name: Forus, ats: ashby, board_token: forus, source: auto }
+  - { name: Synthesia, ats: ashby, board_token: synthesia, source: auto }
+  - { name: Lightning AI, ats: greenhouse, board_token: lightningai, source: auto }
+  - { name: Machinify, ats: greenhouse, board_token: machinifyinc, source: auto }
+  - { name: Everai, ats: ashby, board_token: everai, source: auto }
+  - { name: Joko, ats: ashby, board_token: joko, source: auto }
+  - { name: Omnea, ats: ashby, board_token: omnea, source: auto }
+  - { name: New Relic, ats: greenhouse, board_token: newrelic, source: auto }
+  - { name: Factory, ats: ashby, board_token: factory, source: auto }
+  - { name: Oneapp, ats: ashby, board_token: oneapp, source: auto }
+  - { name: SK hynix America, ats: greenhouse, board_token: skhynixamerica, source: auto }
+  - { name: Basis Ai, ats: ashby, board_token: basis-ai, source: auto }
+  - { name: Ideals, ats: ashby, board_token: ideals, source: auto }
+  - { name: DevRev, ats: greenhouse, board_token: devrev, source: auto }
+  - { name: Serhant, ats: greenhouse, board_token: serhant, source: auto }
+  - { name: Aerovect, ats: ashby, board_token: aerovect, source: auto }
+  - { name: Coderabbit, ats: ashby, board_token: coderabbit, source: auto }
+  - { name: Coram Ai, ats: ashby, board_token: coram-ai, source: auto }
+  - { name: Docebo, ats: ashby, board_token: docebo, source: auto }
+  - { name: Owner, ats: ashby, board_token: owner, source: auto }
+  - { name: Fieldguide, ats: ashby, board_token: fieldguide, source: auto }
+  - { name: Prompt, ats: ashby, board_token: prompt, source: auto }
+  - { name: Astro Mechanica, ats: ashby, board_token: astro-mechanica, source: auto }
+  - { name: Ema, ats: ashby, board_token: ema, source: auto }
+  - { name: Thumbtack, ats: ashby, board_token: thumbtack, source: auto }
+  - { name: Wealthsimple, ats: ashby, board_token: wealthsimple, source: auto }
+  - { name: Glance, ats: greenhouse, board_token: glance, source: auto }
+  - { name: Silvus Technologies, ats: greenhouse, board_token: silvus, source: auto }
+  - { name: Almedia, ats: ashby, board_token: almedia, source: auto }
+  - { name: Campfire, ats: ashby, board_token: campfire, source: auto }
+  - { name: Constructor, ats: ashby, board_token: constructor, source: auto }
+  - { name: Permitflow, ats: ashby, board_token: permitflow, source: auto }
+  - { name: Proxima Fusion, ats: ashby, board_token: proxima-fusion, source: auto }
+  - { name: Reducto, ats: ashby, board_token: reducto, source: auto }
+  - { name: MacKay, ats: greenhouse, board_token: mackaysposito, source: auto }
+  - { name: Abridge, ats: ashby, board_token: abridge, source: auto }
+  - { name: Heron Power, ats: ashby, board_token: heron-power, source: auto }
+  - { name: Relayfi, ats: ashby, board_token: relayfi, source: auto }
+  - { name: Taktile, ats: ashby, board_token: taktile, source: auto }
+  - { name: Panthalassa, ats: greenhouse, board_token: panthalassa, source: auto }
+  - { name: Skild AI, ats: greenhouse, board_token: skildai-careers, source: auto }
+  - { name: Eightsleep, ats: ashby, board_token: eightsleep, source: auto }
+  - { name: Energy Exemplar, ats: greenhouse, board_token: energyexemplarllc, source: auto }
+  - { name: Everlaw, ats: greenhouse, board_token: everlaw, source: auto }
+  - { name: Chartis, ats: ashby, board_token: chartis, source: auto }
+  - { name: Clipboard, ats: ashby, board_token: clipboard, source: auto }
+  - { name: Datasnipper, ats: ashby, board_token: datasnipper, source: auto }
+  - { name: Kalshi, ats: ashby, board_token: kalshi, source: auto }
+  - { name: Kayak, ats: ashby, board_token: kayak, source: auto }
+  - { name: Reframesystems, ats: ashby, board_token: reframesystems, source: auto }
+  - { name: Gemini, ats: greenhouse, board_token: gemini, source: auto }
+  - { name: Kikoff, ats: greenhouse, board_token: kikoff, source: auto }
+  - { name: National Information Solutions Cooperative (NISC), ats: greenhouse, board_token: nisc, source: auto }
+  - { name: "S&B USA", ats: greenhouse, board_token: sbusa, source: auto }
+  - { name: Sonder.io, ats: greenhouse, board_token: sonderaustralia, source: auto }
+  - { name: Referrals Only, ats: greenhouse, board_token: thoughtworksreferral, source: auto }
+  - { name: Partly.Com, ats: ashby, board_token: partly.com, source: auto }
+  - { name: Ridealso, ats: ashby, board_token: ridealso, source: auto }
+  - { name: Runway Ml, ats: ashby, board_token: runway-ml, source: auto }
+  - { name: Conga, ats: greenhouse, board_token: conga, source: auto }
+  - { name: Flex, ats: greenhouse, board_token: flex, source: auto }
+  - { name: A Place For Mom, ats: ashby, board_token: a-place-for-mom, source: auto }
+  - { name: Dexmate, ats: ashby, board_token: dexmate, source: auto }
+  - { name: Ivo Inc, ats: ashby, board_token: ivo-inc, source: auto }
+  - { name: Jobber, ats: ashby, board_token: jobber, source: auto }
+  - { name: Junipersquare, ats: ashby, board_token: junipersquare, source: auto }
+  - { name: Rula, ats: ashby, board_token: rula, source: auto }
+  - { name: Sereact, ats: ashby, board_token: sereact, source: auto }
+  - { name: Stepful, ats: ashby, board_token: stepful, source: auto }
+  - { name: Nortal, ats: greenhouse, board_token: nortal, source: auto }
+  - { name: Showpad, ats: greenhouse, board_token: showpad, source: auto }
+  - { name: Candidhealth, ats: ashby, board_token: candidhealth, source: auto }
+  - { name: Embedding Vc, ats: ashby, board_token: embedding-vc, source: auto }
+  - { name: Nivoda, ats: ashby, board_token: nivoda, source: auto }
+  - { name: Scribe, ats: ashby, board_token: scribe, source: auto }
+  - { name: Taptapsend, ats: ashby, board_token: taptapsend, source: auto }
+  - { name: Easygo, ats: greenhouse, board_token: easygo, source: auto }
+  - { name: Blacksemiconductor, ats: ashby, board_token: blacksemiconductor, source: auto }
+  - { name: Code Metal, ats: ashby, board_token: code-metal, source: auto }
+  - { name: Rillet, ats: ashby, board_token: rillet, source: auto }
+  - { name: Tellos, ats: ashby, board_token: tellos, source: auto }
+  - { name: Pliant, ats: ashby, board_token: pliant, source: auto }
+  - { name: Retell Ai, ats: ashby, board_token: retell-ai, source: auto }
+  - { name: Emergent Labs, ats: greenhouse, board_token: emergentlabsinc, source: auto }
+  - { name: Maven Clinic, ats: greenhouse, board_token: mavenclinic, source: auto }
+  - { name: Twin Health, ats: greenhouse, board_token: twinhealth, source: auto }
+  - { name: Brainco, ats: ashby, board_token: brainco, source: auto }
+  - { name: ShopMy, ats: greenhouse, board_token: shopmy, source: auto }
+  - { name: 9Fin, ats: ashby, board_token: 9fin, source: auto }
+  - { name: Bobyard, ats: ashby, board_token: bobyard, source: auto }
+  - { name: D Matrix, ats: ashby, board_token: d-matrix, source: auto }
+  - { name: N8N, ats: ashby, board_token: n8n, source: auto }
+  - { name: Speak, ats: ashby, board_token: speak, source: auto }
+  - { name: Stellar, ats: ashby, board_token: stellar, source: auto }
+  - { name: Farther, ats: greenhouse, board_token: fartherfinance, source: auto }
+  - { name: HP IQ, ats: greenhouse, board_token: hpiq, source: auto }
+  - { name: M9 Solutions, ats: greenhouse, board_token: m9solutions, source: auto }
+  - { name: Orchard, ats: greenhouse, board_token: orchard, source: auto }
+  - { name: Arq, ats: ashby, board_token: arq, source: auto }
+  - { name: Confido, ats: ashby, board_token: confido, source: auto }
+  - { name: Gigaml, ats: ashby, board_token: gigaml, source: auto }
+  - { name: Livekit, ats: ashby, board_token: livekit, source: auto }
+  - { name: Peec, ats: ashby, board_token: peec, source: auto }
+  - { name: Plane, ats: ashby, board_token: plane, source: auto }
+  - { name: Raisin, ats: greenhouse, board_token: raisin, source: auto }
+  - { name: Amo, ats: ashby, board_token: amo, source: auto }
+  - { name: Heven AeroTech, ats: greenhouse, board_token: hevenaerotech, source: auto }
+  - { name: itD Tech, ats: greenhouse, board_token: itd, source: auto }
+  - { name: Robots and Pencils, ats: greenhouse, board_token: robotsandpencils, source: auto }
+  - { name: Sila, ats: greenhouse, board_token: silananotechnologies, source: auto }
+  - { name: Carwow, ats: ashby, board_token: carwow, source: auto }
+  - { name: Fal Ai, ats: ashby, board_token: fal-ai, source: auto }
+  - { name: Matter Intelligence, ats: ashby, board_token: matter-intelligence, source: auto }
+  - { name: Moss, ats: ashby, board_token: moss, source: auto }
+  - { name: Wispr Flow, ats: ashby, board_token: wispr-flow, source: auto }
+  - { name: "ezCater, Inc", ats: greenhouse, board_token: ezcaterinc, source: auto }
+  - { name: Upgrade, ats: greenhouse, board_token: upgrade, source: auto }
+  - { name: Grow Therapy, ats: ashby, board_token: grow-therapy, source: auto }
+  - { name: Onebrief, ats: ashby, board_token: onebrief, source: auto }
+  - { name: Pergolux, ats: ashby, board_token: pergolux, source: auto }
+  - { name: Rilla, ats: ashby, board_token: rilla, source: auto }
+  - { name: DKB Code Factory, ats: greenhouse, board_token: dkbcodefactory, source: auto }
+  - { name: Mesh Optical Technologies, ats: greenhouse, board_token: meshopticaltechnologies, source: auto }
+  - { name: The Knot Worldwide, ats: greenhouse, board_token: theknotworldwide, source: auto }
+  - { name: Netwealth, ats: ashby, board_token: netwealth, source: auto }
+  - { name: Nightfall Ai, ats: ashby, board_token: nightfall-ai, source: auto }
+  - { name: Ruby Labs, ats: ashby, board_token: ruby-labs, source: auto }
+  - { name: Versemedical, ats: ashby, board_token: versemedical, source: auto }
+  - { name: Kalshi, ats: greenhouse, board_token: kalshi, source: auto }
+  - { name: Pushpay, ats: greenhouse, board_token: pushpay, source: auto }
+  - { name: Reonic, ats: ashby, board_token: reonic, source: auto }
+  - { name: Sandboxaq, ats: ashby, board_token: sandboxaq, source: auto }
+  - { name: Swarmaero, ats: ashby, board_token: swarmaero, source: auto }
+  - { name: Viktor, ats: ashby, board_token: viktor, source: auto }
+  - { name: Customer.io, ats: greenhouse, board_token: customerio, source: auto }
+  - { name: Mill, ats: greenhouse, board_token: mill, source: auto }
+  - { name: Canals, ats: ashby, board_token: canals, source: auto }
+  - { name: Levelpath, ats: ashby, board_token: levelpath, source: auto }
+  - { name: Quantware, ats: ashby, board_token: quantware, source: auto }
+  - { name: Vetcove, ats: ashby, board_token: vetcove, source: auto }
+  - { name: Workos, ats: ashby, board_token: workos, source: auto }
+  - { name: Dataiku, ats: greenhouse, board_token: dataiku, source: auto }
+  - { name: InStride Health, ats: greenhouse, board_token: instridehealth, source: auto }
+  - { name: Livefront, ats: greenhouse, board_token: livefront, source: auto }
+  - { name: Meade, ats: greenhouse, board_token: meadeengineeringinc, source: auto }
+  - { name: Melio, ats: greenhouse, board_token: melio, source: auto }
+  - { name: Bestow, ats: ashby, board_token: bestow, source: auto }
+  - { name: Braintrust, ats: ashby, board_token: braintrust, source: auto }
+  - { name: Foundry For Good, ats: ashby, board_token: foundry-for-good, source: auto }
+  - { name: Scorewarrior, ats: ashby, board_token: scorewarrior, source: auto }
+  - { name: Solace, ats: ashby, board_token: solace, source: auto }
+  - { name: Weave, ats: ashby, board_token: weave, source: auto }
+  - { name: Flo Health, ats: greenhouse, board_token: flohealth, source: auto }
+  - { name: Assorthealth, ats: ashby, board_token: assorthealth, source: auto }
+  - { name: Inferact, ats: ashby, board_token: inferact, source: auto }
+  - { name: Meshy, ats: ashby, board_token: meshy, source: auto }
+  - { name: Orb, ats: ashby, board_token: orb, source: auto }
+  - { name: Orchard, ats: ashby, board_token: orchard, source: auto }
+  - { name: Primer, ats: ashby, board_token: primer, source: auto }
+  - { name: Rwazi, ats: ashby, board_token: rwazi, source: auto }
+  - { name: Tremendous, ats: ashby, board_token: tremendous, source: auto }
+  - { name: "Envoy Global, Inc.", ats: greenhouse, board_token: envoyglobalinc, source: auto }
+  - { name: Northbeam, ats: greenhouse, board_token: northbeam, source: auto }
+  - { name: Ondo Finance, ats: greenhouse, board_token: ondofinance, source: auto }
+  - { name: Otter, ats: greenhouse, board_token: otter, source: auto }
+  - { name: Platform Science, ats: greenhouse, board_token: platformscience, source: auto }
+  - { name: Atlys, ats: ashby, board_token: atlys, source: auto }
+  - { name: Cardless, ats: ashby, board_token: cardless, source: auto }
+  - { name: Dust, ats: ashby, board_token: dust, source: auto }
+  - { name: Galvany, ats: ashby, board_token: galvany, source: auto }
+  - { name: Numeral, ats: ashby, board_token: numeral, source: auto }
+  - { name: Openart, ats: ashby, board_token: openart, source: auto }
+  - { name: Paddle, ats: ashby, board_token: paddle, source: auto }
+  - { name: Parallel, ats: ashby, board_token: parallel, source: auto }
+  - { name: Sesame, ats: ashby, board_token: sesame, source: auto }
+  - { name: Superpower, ats: ashby, board_token: superpower, source: auto }
+  - { name: Tennr, ats: ashby, board_token: tennr, source: auto }
+  - { name: Tilthq, ats: ashby, board_token: tilthq, source: auto }
+  - { name: Valon, ats: ashby, board_token: valon, source: auto }
+  - { name: FuseGlobal, ats: greenhouse, board_token: fuseglobalpartners, source: auto }
+  - { name: Headout, ats: greenhouse, board_token: headoutcareers, source: auto }
+  - { name: Loonshot Games, ats: greenhouse, board_token: loonshotgames, source: auto }
+  - { name: Medsien, ats: greenhouse, board_token: medsien, source: auto }
+  - { name: Butterflymx, ats: ashby, board_token: butterflymx, source: auto }
+  - { name: Meridianlink, ats: ashby, board_token: meridianlink, source: auto }
+  - { name: Nash, ats: ashby, board_token: nash, source: auto }
+  - { name: Tacto, ats: ashby, board_token: tacto, source: auto }
+  - { name: Telli, ats: ashby, board_token: telli, source: auto }
+  - { name: Withpulley, ats: ashby, board_token: withpulley, source: auto }
+  - { name: Mammoth Brands, ats: greenhouse, board_token: mammothbrands, source: auto }
+  - { name: Referrals Only, ats: greenhouse, board_token: monzoreferrals, source: auto }
+  - { name: Agentio, ats: ashby, board_token: agentio, source: auto }
+  - { name: Fonoa, ats: ashby, board_token: fonoa, source: auto }
+  - { name: Gallatin, ats: ashby, board_token: gallatin, source: auto }
+  - { name: Gecko Robotics, ats: ashby, board_token: gecko-robotics, source: auto }
+  - { name: Latamcent, ats: ashby, board_token: latamcent, source: auto }
+  - { name: Nerdwallet, ats: ashby, board_token: nerdwallet, source: auto }
+  - { name: Numeric, ats: ashby, board_token: numeric, source: auto }
+  - { name: Outset, ats: ashby, board_token: outset, source: auto }
+  - { name: Simular, ats: ashby, board_token: simular, source: auto }
+  - { name: Spear Ai, ats: ashby, board_token: spear-ai, source: auto }
+  - { name: Taaraconnect, ats: ashby, board_token: taaraconnect, source: auto }
+  - { name: Tin Can, ats: ashby, board_token: tin-can, source: auto }
+  - { name: Vclusterlabs, ats: ashby, board_token: vclusterlabs, source: auto }
+  - { name: Whitecircle, ats: ashby, board_token: whitecircle, source: auto }
+  - { name: Withpace, ats: ashby, board_token: withpace, source: auto }
+  - { name: Xapien, ats: ashby, board_token: xapien, source: auto }
+  - { name: Celigo, ats: greenhouse, board_token: celigo, source: auto }
+  - { name: Cobre, ats: greenhouse, board_token: cobre, source: auto }
+  - { name: General Assembly, ats: greenhouse, board_token: generalassembly, source: auto }
+  - { name: Epidemic Sound, ats: ashby, board_token: epidemic-sound, source: auto }
+  - { name: Junior, ats: ashby, board_token: junior, source: auto }
+  - { name: Langdock, ats: ashby, board_token: langdock, source: auto }
+  - { name: Reevo, ats: ashby, board_token: reevo, source: auto }
+  - { name: Revenuecat, ats: ashby, board_token: revenuecat, source: auto }
+  - { name: Runpod, ats: ashby, board_token: runpod, source: auto }
+  - { name: Wordsmith, ats: ashby, board_token: wordsmith, source: auto }
+  - { name: "Catch Creation, LLC", ats: greenhouse, board_token: catchcreationllc, source: auto }
+  - { name: Coast, ats: greenhouse, board_token: coast, source: auto }
+  - { name: In The Pocket, ats: greenhouse, board_token: inthepocket, source: auto }
+  - { name: PayPay Securities, ats: greenhouse, board_token: paypaysec, source: auto }
+  - { name: Infinity Constellation, ats: ashby, board_token: infinity-constellation, source: auto }
+  - { name: Kaizenlabs, ats: ashby, board_token: kaizenlabs, source: auto }
+  - { name: Lyric, ats: ashby, board_token: lyric, source: auto }
+  - { name: Motorway, ats: ashby, board_token: motorway, source: auto }
+  - { name: Pylon Labs, ats: ashby, board_token: pylon-labs, source: auto }
+  - { name: Radar, ats: ashby, board_token: radar, source: auto }
+  - { name: Stuut Ai, ats: ashby, board_token: stuut-ai, source: auto }
+  - { name: Tessera Labs, ats: ashby, board_token: tessera-labs, source: auto }
+  - { name: Triumph Arcade, ats: ashby, board_token: triumph-arcade, source: auto }
+  - { name: Dwelly, ats: greenhouse, board_token: dwelly, source: auto }
+  - { name: INSTALILY.AI, ats: greenhouse, board_token: instalilyai, source: auto }
+  - { name: LogicGate, ats: greenhouse, board_token: logicgate, source: auto }
+  - { name: NinjaTrader, ats: greenhouse, board_token: ninjatrader, source: auto }
+  - { name: SecurityScorecard, ats: greenhouse, board_token: securityscorecard, source: auto }
+  - { name: Semafor, ats: greenhouse, board_token: semafor, source: auto }
+  - { name: Abby Care, ats: ashby, board_token: abby-care, source: auto }
+  - { name: Alchemy, ats: ashby, board_token: alchemy, source: auto }
+  - { name: Amperos, ats: ashby, board_token: amperos, source: auto }
+  - { name: Artemis, ats: ashby, board_token: artemis, source: auto }
+  - { name: Casa, ats: ashby, board_token: casa, source: auto }
+  - { name: Check Technologies, ats: ashby, board_token: check-technologies, source: auto }
+  - { name: Haystacknews, ats: ashby, board_token: haystacknews, source: auto }
+  - { name: Highlightta, ats: ashby, board_token: highlightta, source: auto }
+  - { name: Jobs Valence, ats: ashby, board_token: jobs-valence, source: auto }
+  - { name: Maticrobots, ats: ashby, board_token: maticrobots, source: auto }
+  - { name: Nabla, ats: ashby, board_token: nabla, source: auto }
+  - { name: Wisdom Ai, ats: ashby, board_token: wisdom-ai, source: auto }
+  - { name: EarnIn, ats: greenhouse, board_token: earnin, source: auto }
+  - { name: ExtraHop, ats: greenhouse, board_token: extrahopnetworks, source: auto }
+  - { name: "Harry's", ats: greenhouse, board_token: harrys, source: auto }
+  - { name: League Inc., ats: greenhouse, board_token: leagueinc, source: auto }
+  - { name: "Perpay - Career's Page", ats: greenhouse, board_token: perpay, source: auto }
+  - { name: Enter Ai, ats: ashby, board_token: enter-ai, source: auto }
+  - { name: Envoy, ats: ashby, board_token: envoy, source: auto }
+  - { name: Granola, ats: ashby, board_token: granola, source: auto }
+  - { name: Kin, ats: ashby, board_token: kin, source: auto }
+  - { name: Metriport, ats: ashby, board_token: metriport, source: auto }
+  - { name: Olix, ats: ashby, board_token: olix, source: auto }
+
 # Companies never to apply to (by name, case-insensitive).
 blocklist: []
 

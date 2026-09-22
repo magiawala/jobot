@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable
 
 import httpx
@@ -41,8 +42,18 @@ def fetch_company(company: dict[str, Any], client: httpx.Client) -> list[Job]:
     return FETCHERS[ats](client).fetch(company["name"], company["board_token"])
 
 
-def run_discovery(only: list[str] | None = None, progress: Callable[[str], None] | None = None) -> dict[str, Any]:
-    """Fetch every configured board, upsert jobs, return counts + new job ids."""
+def _fetch_one(c: dict[str, Any], client: httpx.Client) -> tuple[dict[str, Any], list[Job] | None, str | None]:
+    try:
+        return c, fetch_company(c, client), None
+    except BoardNotFound:
+        return c, None, f"board not found ({c.get('ats')}/{c.get('board_token')})"
+    except Exception as e:  # noqa: BLE001 - per-company isolation is the point
+        return c, None, f"{type(e).__name__}: {e}"
+
+
+def run_discovery(only: list[str] | None = None, progress: Callable[[str], None] | None = None,
+                  max_workers: int = 16) -> dict[str, Any]:
+    """Fetch every configured board (concurrently) and upsert jobs. Returns counts + new job ids."""
     cfg = config.companies()
     comps = cfg.get("companies") or []
     if only:
@@ -54,37 +65,34 @@ def run_discovery(only: list[str] | None = None, progress: Callable[[str], None]
     errors: list[str] = []
     started = time.time()
     with make_client() as client, db.session() as conn:
-        for c in comps:
-            name = c.get("name", "?")
-            try:
-                jobs = fetch_company(c, client)
-            except BoardNotFound:
-                counts["boards_failed"] += 1
-                errors.append(f"{name}: board not found ({c.get('ats')}/{c.get('board_token')})")
-                logger.warning("board not found: %s (%s/%s)", name, c.get("ats"), c.get("board_token"))
-                continue
-            except Exception as e:  # noqa: BLE001 - per-company isolation is the point
-                counts["boards_failed"] += 1
-                errors.append(f"{name}: {type(e).__name__}: {e}")
-                logger.warning("fetch failed for %s: %s", name, e)
-                continue
-            counts["boards"] += 1
-            counts["fetched"] += len(jobs)
-            relevant = [j for j in jobs if tf.search(j.title)]
-            counts["relevant"] += len(relevant)
-            seen: set[str] = set()
-            for j in relevant:
-                seen.add(j.external_id)
-                jid, is_new, changed = db.upsert_job(conn, j.as_dict())
-                if is_new:
-                    counts["new"] += 1
-                    new_ids.append(jid)
-                elif changed:
-                    counts["updated"] += 1
-            counts["deactivated"] += db.mark_inactive_missing(conn, c["ats"], c["board_token"], seen)
-            if progress:
-                progress(f"{name}: {len(jobs)} jobs, {len(relevant)} design-related")
-            conn.commit()
+        with ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futures = [ex.submit(_fetch_one, c, client) for c in comps]
+            for fut in as_completed(futures):
+                c, jobs, err = fut.result()
+                name = c.get("name", "?")
+                if err is not None:
+                    counts["boards_failed"] += 1
+                    errors.append(f"{name}: {err}")
+                    logger.warning("fetch failed for %s: %s", name, err)
+                    continue
+                jobs = jobs or []
+                counts["boards"] += 1
+                counts["fetched"] += len(jobs)
+                relevant = [j for j in jobs if tf.search(j.title)]
+                counts["relevant"] += len(relevant)
+                seen: set[str] = set()
+                for j in relevant:
+                    seen.add(j.external_id)
+                    jid, is_new, changed = db.upsert_job(conn, j.as_dict())
+                    if is_new:
+                        counts["new"] += 1
+                        new_ids.append(jid)
+                    elif changed:
+                        counts["updated"] += 1
+                counts["deactivated"] += db.mark_inactive_missing(conn, c["ats"], c["board_token"], seen)
+                if progress:
+                    progress(f"{name}: {len(jobs)} jobs, {len(relevant)} design-related")
+        conn.commit()
     counts["seconds"] = round(time.time() - started, 1)
     return {"counts": counts, "new_ids": new_ids, "errors": errors}
 
