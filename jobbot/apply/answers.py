@@ -24,19 +24,27 @@ QUESTION_PATTERNS: dict[str, list[str]] = {
     "full_name": ["full name", "legal name", "your name", "name"],
     "email": ["email", "email address", "e-mail"],
     "phone": ["phone", "phone number", "mobile", "telephone"],
-    "location": ["location", "current location", "location (city)", "city", "where are you located",
-                 "from where do you intend to work"],
+    # "how did you hear about this opportunity" was matching `location` at 85% on the word
+    # "opportunity"/"about" overlap, which would have typed a city into a referral-source field.
+    # Location phrasings are kept tight and anchored for that reason.
+    "location": ["location", "current location", "location city", "city of residence",
+                 "where are you located", "where do you currently live",
+                 "from where do you intend to work", "current city"],
     "linkedin": ["linkedin profile", "linkedin url", "linkedin"],
     "portfolio": ["portfolio url", "website or portfolio", "portfolio", "personal website", "website",
                   "portfolio + password", "portfolio link"],
     "github": ["github url", "github profile", "github"],
     "current_company": ["current company", "current employer", "company"],
     "how_did_you_hear": ["how did you hear about us", "how did you find", "referral source",
-                         "how did you hear about this"],
+                         "how did you hear about this", "how did you hear about this opportunity",
+                         "how did you learn about", "where did you hear about"],
     "work_authorization": ["are you authorized to work", "authorized to work", "work authorization",
-                           "legally authorized", "eligible to work"],
+                           "legally authorized", "eligible to work",
+                           "do you have a legal right to work", "legal right to work",
+                           "are you legally eligible", "authorized to be employed"],
     "needs_sponsorship": ["require sponsorship", "need sponsorship", "will you now or in the future require",
-                          "visa sponsorship", "require immigration"],
+                          "visa sponsorship", "require immigration", "sponsorship for employment visa",
+                          "will you require sponsorship", "need visa support"],
     "previously_worked_here": ["have you ever worked for", "previously worked", "former employee",
                                "worked here before"],
     "related_to_employees": ["related to", "family member", "relatives employed"],
@@ -46,7 +54,9 @@ QUESTION_PATTERNS: dict[str, list[str]] = {
     "school": ["school", "university", "college", "institution"],
     "graduation_year": ["graduation year", "year of graduation", "expected graduation"],
     "desired_salary": ["salary expectation", "desired salary", "compensation expectation",
-                       "expected salary", "salary requirement"],
+                       "expected salary", "salary requirement", "desired base compensation",
+                       "desired compensation", "base compensation for this role",
+                       "compensation requirement", "target compensation"],
     "start_date": ["start date", "when can you start", "earliest start", "available to start",
                    "notice period"],
     "pronouns": ["pronouns", "preferred pronouns"],
@@ -200,6 +210,58 @@ STRICT_MATCH_KEYS = {"school", "highest_degree", "graduation_year", "work_author
                      "needs_sponsorship", "years_experience", "current_company"}
 STRICT_THRESHOLD = 93
 DEFAULT_OPTION_THRESHOLD = 85
+
+
+US_STATE_NAMES = {
+    "alabama", "alaska", "arizona", "arkansas", "california", "colorado", "connecticut", "delaware",
+    "florida", "georgia", "hawaii", "idaho", "illinois", "indiana", "iowa", "kansas", "kentucky",
+    "louisiana", "maine", "maryland", "massachusetts", "michigan", "minnesota", "mississippi",
+    "missouri", "montana", "nebraska", "nevada", "new hampshire", "new jersey", "new mexico",
+    "new york", "north carolina", "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania",
+    "rhode island", "south carolina", "south dakota", "tennessee", "texas", "utah", "vermont",
+    "virginia", "washington", "west virginia", "wisconsin", "wyoming",
+}
+STATE_ABBR = {
+    "AL": "alabama", "AK": "alaska", "AZ": "arizona", "AR": "arkansas", "CA": "california",
+    "CO": "colorado", "CT": "connecticut", "DE": "delaware", "FL": "florida", "GA": "georgia",
+    "HI": "hawaii", "ID": "idaho", "IL": "illinois", "IN": "indiana", "IA": "iowa", "KS": "kansas",
+    "KY": "kentucky", "LA": "louisiana", "ME": "maine", "MD": "maryland", "MA": "massachusetts",
+    "MI": "michigan", "MN": "minnesota", "MS": "mississippi", "MO": "missouri", "MT": "montana",
+    "NE": "nebraska", "NV": "nevada", "NH": "new hampshire", "NJ": "new jersey", "NM": "new mexico",
+    "NY": "new york", "NC": "north carolina", "ND": "north dakota", "OH": "ohio", "OK": "oklahoma",
+    "OR": "oregon", "PA": "pennsylvania", "RI": "rhode island", "SC": "south carolina",
+    "SD": "south dakota", "TN": "tennessee", "TX": "texas", "UT": "utah", "VT": "vermont",
+    "VA": "virginia", "WA": "washington", "WV": "west virginia", "WI": "wisconsin", "WY": "wyoming",
+}
+
+
+def derive_answer(label: str, profile: dict[str, Any]) -> str | None:
+    """Answers questions that profile.yaml implies but doesn't state literally.
+
+    The motivating real case: "Do you live in one of the following states? Alabama, Alaska,
+    Delaware, ..." - answerable from the profile's state without asking the user anything.
+    """
+    norm = normalize_label(label)
+    loc = profile.get("location") or {}
+    state_abbr = (loc.get("state") or "").upper()
+    state_name = STATE_ABBR.get(state_abbr, "")
+
+    if "do you live in one of the following" in norm or "reside in any of the following" in norm:
+        listed = {s for s in US_STATE_NAMES if s in norm}
+        if listed and state_name:
+            return "Yes" if state_name in listed else "No"
+
+    if state_name and ("do you live in" in norm or "are you located in" in norm or "reside in" in norm):
+        for other in US_STATE_NAMES:
+            if other in norm:
+                return "Yes" if other == state_name else "No"
+
+    if "are you based in the us" in norm or "located in the united states" in norm \
+            or "authorized to work in the united states" in norm:
+        country = (loc.get("country") or "").lower()
+        if "united states" in country:
+            return "Yes"
+    return None
 
 
 def pick_option(options: list[str], desired: str, eeo: bool = False, strict: bool = False) -> str | None:

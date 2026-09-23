@@ -77,8 +77,11 @@ class AshbyAdapter(BaseApplyAdapter):
                 continue
 
             if not answer:
+                answer = self.maybe_draft(label, block["tag"] == "TEXTAREA")
+            if not answer:
                 if required:
-                    self.record_unanswered(label, True)
+                    self.record_unanswered(label, True,
+                                           kind="textarea" if block["tag"] == "TEXTAREA" else "text")
                 continue
 
             selector = self._selector_for(block)
@@ -113,7 +116,7 @@ class AshbyAdapter(BaseApplyAdapter):
             texts = el.evaluate("e => Array.from(e.options).map(o => o.text)")
             choice = pick_option(texts, desired, eeo=eeo)
             if choice is None:
-                self.record_unanswered(label, is_required(label))
+                self.record_unanswered(label, is_required(label), options=texts, kind="select")
                 return
             el.select_option(label=choice)
             self.filled[label[:50]] = choice

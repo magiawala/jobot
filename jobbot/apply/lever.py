@@ -132,8 +132,11 @@ class LeverAdapter(BaseApplyAdapter):
                 continue
 
             if not answer:
+                answer = self.maybe_draft(label, first["tag"] == "TEXTAREA")
+            if not answer:
                 if required:
-                    self.record_unanswered(label, True)
+                    self.record_unanswered(label, True,
+                                           kind="textarea" if first["tag"] == "TEXTAREA" else "text")
                 continue
 
             selector = f'[name="{name}"]'

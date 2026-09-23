@@ -16,10 +16,28 @@ from ..resume.textclean import normalize_text
 
 logger = log.get("apply.draft")
 
-# Only these get a Claude draft. Anything else unknown is a human's call.
+# Free-text questions answerable from the resume's own facts. Kept to open-ended "tell us about
+# your work" style prompts: these recur constantly across postings (they were the single biggest
+# source of needs_human in practice), and the answer is grounded in master.json either way.
+#
+# Deliberately NOT draftable: anything asking for a fact JobBot doesn't have (salary history,
+# visa specifics, notice period, references, security clearance, certifications). Those go to
+# learned_answers.yaml for a one-time human answer instead of being invented.
 DRAFTABLE_PATTERNS = re.compile(
     r"why (do you )?(want to |are you )?(join|work|apply|interested)|why this (company|role|team)|"
-    r"why (are you interested|us\b)|what (excites|interests) you|tell us why",
+    r"why (are you interested|us\b)|what (excites|interests) you|tell us why|"
+    r"(project|work|accomplishment)s? (you(\'re| are)? )?(most )?proud of|"
+    r"tell (us|me) about (a|your|yourself)|describe (a|your) (project|experience|time)|"
+    r"favou?rite project|proudest|what does .{0,40} mean (to you|in your)|"
+    r"how do you (approach|think about|use)|walk us through|"
+    r"what (is|are) your (approach|strengths|design process)",
+    re.I,
+)
+
+# Even within a draftable-looking prompt, these mean it needs facts we don't hold.
+NON_DRAFTABLE_HINTS = re.compile(
+    r"salary|compensation|clearance|citizenship|visa|sponsor|notice period|reference|"
+    r"criminal|felony|background check|certification number|license number",
     re.I,
 )
 
@@ -49,7 +67,12 @@ RESUME (facts you may draw on):
 
 
 def is_draftable(label: str) -> bool:
-    return bool(DRAFTABLE_PATTERNS.search(label or ""))
+    # Form labels routinely use curly quotes ("What's a project you're most proud of?"), which
+    # silently defeat ASCII apostrophes in these patterns - normalize before matching.
+    text = normalize_text(label or "")
+    if NON_DRAFTABLE_HINTS.search(text):
+        return False
+    return bool(DRAFTABLE_PATTERNS.search(text))
 
 
 def draft_answer(label: str, job: dict[str, Any], job_id: int | None = None) -> str | None:

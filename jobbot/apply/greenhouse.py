@@ -110,7 +110,7 @@ class GreenhouseAdapter(BaseApplyAdapter):
             texts = [opts.nth(i).inner_text().strip() for i in range(min(opts.count(), 60))]
             choice = pick_option(texts, desired, strict=self.is_strict_label(label))
             if choice is None:
-                self.record_unanswered(label, is_required(label))
+                self.record_unanswered(label, is_required(label), options=texts, kind="select")
                 self.page.keyboard.press("Escape")
                 return
             opts.nth(texts.index(choice)).click()

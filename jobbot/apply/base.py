@@ -20,8 +20,8 @@ from playwright.sync_api import Page, TimeoutError as PWTimeout, sync_playwright
 
 from .. import config, log
 from .answers import (
-    STRICT_MATCH_KEYS, AnswerBook, build_answer_book, classify_label, is_required, normalize_label,
-    pick_option,
+    STRICT_MATCH_KEYS, AnswerBook, build_answer_book, classify_label, derive_answer, is_required,
+    normalize_label, pick_option,
 )
 
 logger = log.get("apply")
@@ -186,13 +186,25 @@ class BaseApplyAdapter:
             return False
 
     def answer_for_label(self, label: str) -> tuple[str | None, bool]:
-        """Returns (answer_value, is_eeo). None means we have no configured answer."""
+        """Resolution order: profile answer -> derived-from-profile -> previously learned answer.
+        Returns (answer_value, is_eeo); None means nothing could answer it."""
         key, eeo, _score = classify_label(label)
-        if key is None:
-            return None, False
         if eeo:
             return self.answers.eeo.get(key, "decline"), True
-        return self.answers.get(key), False
+        if key is not None:
+            value = self.answers.get(key)
+            if value:
+                return value, False
+
+        derived = derive_answer(label, self.profile)
+        if derived:
+            return derived, False
+
+        from .learned import find_answer
+        learned = find_answer(label)
+        if learned:
+            return learned, False
+        return None, False
 
     def is_strict_label(self, label: str) -> bool:
         """True when picking a merely-similar dropdown option would be a misrepresentation."""
@@ -220,10 +232,19 @@ class BaseApplyAdapter:
             logger.info("drafted answer for %r (%d chars)", label[:60], len(answer))
         return answer
 
-    def record_unanswered(self, label: str, required: bool) -> None:
+    def record_unanswered(self, label: str, required: bool, options: list[str] | None = None,
+                          kind: str = "text") -> None:
         tag = f"{'REQUIRED' if required else 'optional'}: {label.strip()[:120]}"
         if tag not in self.unanswered:
             self.unanswered.append(tag)
+        # Capture it for one-time human input so the same question never blocks a second time.
+        try:
+            from .learned import record_pending
+
+            record_pending(label, ats=self.ats, options=options, kind=kind, required=required,
+                           company=self.job.get("company"), url=self.job.get("url"))
+        except Exception as e:  # noqa: BLE001 - learning must never break an application
+            logger.debug("could not record learnable question: %s", e)
 
     def drop_unanswered(self, label: str) -> None:
         """A later element for the same question succeeded (forms often expose one question as

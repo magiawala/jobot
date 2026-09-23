@@ -240,6 +240,69 @@ def apply_cmd(
 
 
 @app.command()
+def dashboard(
+    target: int = typer.Option(100, help="Weekly application target to track against."),
+    open_it: bool = typer.Option(True, "--open/--no-open", help="Open it in your browser."),
+) -> None:
+    """Build logs/dashboard.html - the queue, weekly progress, blockers and recent runs."""
+    import subprocess
+
+    from .dashboard import build
+
+    path = build(weekly_target=target)
+    console.print(f"[green]built[/] {path}")
+    if open_it:
+        subprocess.run(["open", str(path)], capture_output=True)
+
+
+@app.command()
+def learn(
+    interactive: bool = typer.Option(True, "--interactive/--list", help="Prompt for each, or just list."),
+) -> None:
+    """Answer the questions that blocked applications. Each one you answer here is reused
+    automatically on every future posting that asks it, so needs_human shrinks over time."""
+    from .apply.learned import LEARNED_PATH, load, promote_answered, save, stats
+
+    promoted = promote_answered()
+    if promoted:
+        console.print(f"[green]{promoted}[/] previously-filled answer(s) moved into active use.")
+
+    data = load()
+    pending = sorted(data["pending"], key=lambda e: (-int(e.get("seen_count", 1)), not e.get("required")))
+    s = stats()
+    console.print(f"[bold]Learned answers:[/] {s['answered']} active, {s['pending']} pending "
+                  f"({s['pending_blocking']} blocking applications)\n")
+    if not pending:
+        console.print("Nothing pending. [dim]" + str(LEARNED_PATH) + "[/]")
+        return
+
+    if not interactive:
+        for e in pending:
+            req = "[red]REQUIRED[/]" if e.get("required") else "optional"
+            console.print(f"{req} [dim]seen {e.get('seen_count',1)}x on {e.get('ats')}[/]\n  {e['question']}")
+            if e.get("options"):
+                console.print(f"  [dim]options: {', '.join(e['options'][:8])}[/]")
+        console.print(f"\n[dim]Edit {LEARNED_PATH} directly, or run `jobbot learn` to answer here.[/]")
+        return
+
+    answered = 0
+    for e in pending:
+        req = "[red]REQUIRED[/]" if e.get("required") else "[dim]optional[/]"
+        console.print(f"\n{req} seen [bold]{e.get('seen_count',1)}x[/] on {e.get('ats')} "
+                      f"(e.g. {e.get('example_company') or '?'})")
+        console.print(f"[bold]{e['question']}[/]")
+        if e.get("options"):
+            console.print("  choices: " + " | ".join(e["options"][:12]))
+        reply = typer.prompt("  your answer (blank to skip)", default="", show_default=False)
+        if reply.strip():
+            e["answer"] = reply.strip()
+            answered += 1
+    save(data)
+    moved = promote_answered()
+    console.print(f"\n[green]Saved {answered} answer(s)[/]; {moved} now active for future applications.")
+
+
+@app.command()
 def review() -> None:
     """List applications filled and waiting for your approval."""
     with db.session() as conn:

@@ -44,7 +44,14 @@ locations:
   # "Remote (Canada)", "UK only"), and postings requiring residence outside the US.
 
 thresholds: { skip_below: 50, tailor_at_or_above: 75 }
-limits: { max_tailors_per_day: 10, max_apps_per_run: 5, max_apps_per_day: 30, max_claude_calls_per_day: 25 }
+
+# Sized for the ~100 applications/week target (about 14-15/day).
+# The binding constraint is Claude calls, not job supply: each application with an open-ended
+# essay question costs 1-2 drafting calls, so ~15 applications/day lands around 20-30 calls.
+# If you start hitting Pro usage limits, lower max_claude_calls_per_day first - applications
+# still go out, they just fall back to needs_human on essay questions instead of drafting.
+limits: { max_tailors_per_day: 10, max_apps_per_run: 8, max_apps_per_day: 20, max_claude_calls_per_day: 35 }
+weekly_application_target: 100
 mode: REVIEW        # DRY_RUN | REVIEW | AUTO
 report_time: "20:00"
 tailor_batch_hours: [9, 13, 17]
