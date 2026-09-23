@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Optional
 
 import typer
@@ -161,6 +162,58 @@ def score(explain: bool = typer.Option(False, "--explain", help="Print the top 1
             console.print(f"    [dim]- {r}[/]")
 
 
+@app.command("run")
+def run_cmd(
+    skip_discovery: bool = typer.Option(False, "--skip-discovery", help="Reuse already-discovered jobs."),
+    max_apps: Optional[int] = typer.Option(None, help="Override max applications this run."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Fill forms but never submit, whatever the config says."),
+) -> None:
+    """One full pipeline pass: discover -> score -> fill (within limits). This is what the
+    hourly schedule calls."""
+    from .run import run_once, run_lock
+
+    with run_lock() as acquired:
+        if not acquired:
+            console.print("[yellow]Another run is active - exiting.[/]")
+            return
+        res = run_once(skip_discovery=skip_discovery, max_apps=max_apps, dry_run=dry_run)
+    c = res["counts"]
+    console.print(
+        f"[bold]Run ({c.get('mode')}):[/] {c['discovered_new']} new jobs, {c['scored']} scored | "
+        f"attempted {c['attempted']} -> [cyan]{c['filled']} filled[/], [green]{c['submitted']} submitted[/], "
+        f"[yellow]{c['needs_human']} needs human[/], [red]{c['failed']} failed[/], {c['skipped']} skipped | "
+        f"{c['seconds']}s"
+    )
+    for e in res["errors"][:10]:
+        console.print(f"  [red]{e}[/]")
+    if c["filled"]:
+        console.print("\n[dim]jobbot review   # see what's waiting for approval[/]")
+
+
+@app.command("install-schedule")
+def install_schedule(report_hour: Optional[int] = typer.Option(None, help="Hour (0-23) for the daily report.")) -> None:
+    """Install the hourly run + daily report as launchd agents."""
+    if config.detect_os() != "macos":
+        console.print(f"[red]Only macOS is supported so far (detected {config.detect_os()}).[/]")
+        raise typer.Exit(1)
+    from .scheduler.macos import install, sleep_settings_advice
+
+    written = install(report_hour=report_hour)
+    for p in written:
+        console.print(f"[green]installed[/] {p}")
+    console.print(f"\n{sleep_settings_advice()}")
+    console.print("\n[dim]jobbot status   # confirm both agents are loaded[/]")
+
+
+@app.command("uninstall-schedule")
+def uninstall_schedule() -> None:
+    """Remove the launchd agents."""
+    from .scheduler.macos import uninstall
+
+    removed = uninstall()
+    console.print(f"removed: {', '.join(removed) if removed else 'nothing was installed'}")
+
+
 @app.command("apply")
 def apply_cmd(
     job_id: int = typer.Argument(..., help="Job id from `jobbot jobs`."),
@@ -273,6 +326,29 @@ def status() -> None:
     console.print(f"[bold]claude calls today:[/] {calls}/{config.limits()['max_claude_calls_per_day']}   [bold]claude cli:[/] {check_cli()}")
     from .scheduler import schedule_status
     console.print(f"[bold]schedule:[/] {schedule_status()}")
+
+    # The failure mode that would otherwise be invisible: launchd runs with its own PATH, so a
+    # `claude` that works in your shell can still be missing inside the scheduled run.
+    if config.detect_os() == "macos":
+        from .scheduler.macos import LABEL_HOURLY, _launchd_path_value, plist_path
+        import plistlib
+        p = plist_path(LABEL_HOURLY)
+        if p.exists():
+            with open(p, "rb") as f:
+                scheduled_path = plistlib.load(f).get("EnvironmentVariables", {}).get("PATH", "")
+            from .claude_cli import binary
+            claude_bin = binary()
+            ok = bool(claude_bin) and any(str(Path(claude_bin).parent) == d for d in scheduled_path.split(":"))
+            if ok:
+                console.print("[bold]scheduled PATH:[/] [green]includes claude[/]")
+            else:
+                console.print(f"[bold]scheduled PATH:[/] [red]does NOT include claude ({claude_bin})[/] "
+                             "- re-run `jobbot install-schedule`")
+
+    profile_gaps = [k for k, v in (config.profile().get("work_authorization") or {}).items() if v is None]
+    if profile_gaps:
+        console.print(f"[yellow]profile: work_authorization unset ({', '.join(profile_gaps)}) - "
+                      "those jobs route to needs_human[/]")
 
 
 if __name__ == "__main__":
