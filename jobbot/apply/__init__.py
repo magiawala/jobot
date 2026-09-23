@@ -42,6 +42,12 @@ def apply_one(job_id: int, mode: str | None = None, headed: bool = False,
         if row is None:
             return FillResult(status="failed", error=f"job {job_id} not found")
         job = dict(row)
+        # tier drives the AUTO-mode dream-company hold, so it must travel with the job
+        score_row = conn.execute("SELECT tier, total, role_bucket FROM scores WHERE job_id=?",
+                                 (job_id,)).fetchone()
+        if score_row:
+            job.update({"tier": score_row["tier"], "score": score_row["total"],
+                        "role_bucket": score_row["role_bucket"]})
 
     adapter_cls = ADAPTERS.get(job["source_ats"])
     if adapter_cls is None:

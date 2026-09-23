@@ -183,7 +183,7 @@ def build_answer_book(profile: dict[str, Any]) -> AnswerBook:
         "portfolio": links.get("portfolio", ""),
         "github": links.get("github", ""),
         "pronouns": profile.get("pronouns", ""),
-        "how_did_you_hear": std.get("how_did_you_hear", ""),
+        "how_did_you_hear": std.get("how_did_you_hear", "") or "Company Website",
         "work_authorization": tri_state(auth.get("authorized_in_us")),
         "needs_sponsorship": sponsorship_answer,
         "previously_worked_here": std.get("previously_worked_here", "No"),
@@ -264,6 +264,15 @@ def derive_answer(label: str, profile: dict[str, Any]) -> str | None:
     return None
 
 
+# When the configured answer matches no offered option, try these equivalents in order. Real
+# example: profile says "Company Website" but Patreon's list offers "Careers Page".
+OPTION_SYNONYMS: dict[str, list[str]] = {
+    "company website": ["careers page", "company site", "company career site", "job board",
+                        "career site", "website", "other"],
+    "careers page": ["company website", "company site", "website", "other"],
+}
+
+
 def pick_option(options: list[str], desired: str, eeo: bool = False, strict: bool = False) -> str | None:
     """Chooses the option text best matching `desired`. EEO fields fall back to a decline option.
     `strict` raises the bar for fields where a wrong-but-similar answer would be a lie."""
@@ -293,4 +302,13 @@ def pick_option(options: list[str], desired: str, eeo: bool = False, strict: boo
         if score > best_score:
             best, best_score = original, score
     threshold = STRICT_THRESHOLD if strict else DEFAULT_OPTION_THRESHOLD
-    return best if best_score >= threshold else None
+    if best_score >= threshold:
+        return best
+    # fall back to a known equivalent phrasing before giving up (never for strict fields,
+    # where a near-enough answer is exactly what we must not give)
+    if not strict:
+        for alt in OPTION_SYNONYMS.get(want, []):
+            for original, norm in cleaned:
+                if fuzz.ratio(norm, alt) >= 90:
+                    return original
+    return None

@@ -24,7 +24,10 @@ class AshbyAdapter(BaseApplyAdapter):
         self.fill_if_present("#_systemfield_name", full_name, "full_name")
         self.fill_if_present("#_systemfield_email", self.answers.get("email") or "", "email")
         self.upload_resume("#_systemfield_resume")
+        self._fill_location()
         self._fill_labeled_fields()
+        self._fill_yesno_buttons()
+        self._fill_consent_radios()
 
     def _field_blocks(self) -> list[dict]:
         return self.page.evaluate("""() => {
@@ -123,6 +126,123 @@ class AshbyAdapter(BaseApplyAdapter):
         except Exception as e:  # noqa: BLE001
             logger.debug("select %s failed: %s", label[:40], e)
             self.record_unanswered(label, is_required(label))
+
+    def _fill_location(self) -> None:
+        """Ashby's Location is an input[role=combobox] with no id or name, backed by a
+        suggestion list. Typing alone leaves it unset, so we pick a suggestion and verify."""
+        value = self.answers.get("location") or ""
+        if not value:
+            return
+        try:
+            box = self.page.locator('.ashby-application-form-field-entry input[role="combobox"]').first
+            if box.count() == 0 or not box.is_visible():
+                return
+            box.click()
+            box.fill(value)
+            self.page.wait_for_timeout(1500)
+            opt = self.page.locator('[role="option"], [class*="option"]:visible').first
+            if opt.count() > 0 and opt.is_visible():
+                opt.click()
+                self.page.wait_for_timeout(300)
+            if (box.input_value() or "").strip():
+                self.filled["location"] = value
+                self.drop_unanswered("Location")
+            else:
+                self.record_unanswered("Location", True, kind="combobox")
+        except Exception as e:  # noqa: BLE001
+            logger.debug("ashby location failed: %s", e)
+
+    def _fill_consent_radios(self) -> None:
+        """The SMS-consent radio pair sits inside the Phone field entry, so an unanswered
+        consent makes the whole Phone group read as empty at submit time. Declining is both a
+        valid answer and the privacy-preserving default."""
+        try:
+            radios = self.page.locator('input[name="communicationConsent"]')
+            if radios.count() == 0:
+                return
+            if radios.evaluate_all("els => els.some(e => e.checked)"):
+                return
+            texts = []
+            for i in range(radios.count()):
+                lab = radios.nth(i).evaluate("e => (e.labels && e.labels[0]) ? e.labels[0].innerText : ''")
+                texts.append((lab or "").strip())
+            desired = str((self.profile.get("standard_answers") or {}).get("sms_consent", "No"))
+            choice = pick_option(texts, desired)
+            if choice is None:
+                return
+            radios.nth(texts.index(choice)).check()
+            self.filled["sms_consent"] = choice
+        except Exception as e:  # noqa: BLE001
+            logger.debug("consent radios failed: %s", e)
+
+    def _yesno_blocks(self) -> list[dict]:
+        """Ashby renders Yes/No questions as <button data-option> pairs, not inputs.
+
+        This matters more than it sounds: a querySelectorAll over input/textarea/select never
+        sees them, so they were neither filled NOR recorded as unanswered - a required question
+        that is simply invisible. On a live Eagle posting three required questions (sponsorship,
+        travel, relocation) were all blank while the run reported unanswered=0.
+        """
+        return self.page.evaluate("""() => {
+          const out = [];
+          document.querySelectorAll('.ashby-application-form-field-entry').forEach(entry => {
+            const opts = entry.querySelectorAll('button[data-option]');
+            if (!opts.length) return;
+            const label = (entry.innerText || '').split('\\n').map(s => s.trim()).filter(Boolean)[0] || '';
+            const answered = Array.from(opts).some(o => o.getAttribute('aria-pressed') === 'true');
+            out.push({
+              label: label.slice(0, 200),
+              answered,
+              options: Array.from(opts).map(o => (o.getAttribute('data-option') || '').trim()),
+            });
+          });
+          return out;
+        }""")
+
+    def _fill_yesno_buttons(self) -> None:
+        for block in self._yesno_blocks():
+            label = block["label"]
+            if block["answered"] or not label:
+                continue
+            required = is_required(label, True)  # Ashby marks these required via the * in label
+            answer, eeo = self.answer_for_label(label)
+            if not answer:
+                if required:
+                    self.record_unanswered(label, True, options=block["options"], kind="yesno")
+                continue
+
+            choice = pick_option(block["options"], answer, eeo=eeo,
+                                 strict=self.is_strict_label(label))
+            if choice is None:
+                if required:
+                    self.record_unanswered(label, True, options=block["options"], kind="yesno")
+                continue
+            if self._click_yesno(label, choice):
+                self.filled[label[:50]] = choice
+                self.drop_unanswered(label)
+            elif required:
+                self.record_unanswered(label, True, options=block["options"], kind="yesno")
+
+    def _click_yesno(self, label: str, option: str) -> bool:
+        """Clicks the option button inside the entry whose text starts with `label`, then
+        verifies aria-pressed actually flipped - a click that silently did nothing would
+        otherwise be reported as filled."""
+        try:
+            entries = self.page.locator(".ashby-application-form-field-entry")
+            for i in range(entries.count()):
+                entry = entries.nth(i)
+                text = (entry.inner_text() or "").strip()
+                if not text.startswith(label[:40]):
+                    continue
+                btn = entry.locator(f'button[data-option="{option}"]').first
+                if btn.count() == 0:
+                    return False
+                btn.click()
+                self.page.wait_for_timeout(250)
+                return btn.get_attribute("aria-pressed") == "true"
+        except Exception as e:  # noqa: BLE001
+            logger.debug("yes/no click failed for %s: %s", label[:40], e)
+        return False
 
     def submit(self) -> bool:
         btn = self.page.locator('button[type="submit"], button:has-text("Submit Application")').first

@@ -57,10 +57,19 @@ def _pid_alive(pid: int) -> bool:
 
 
 def selectable_jobs(conn, limit: int) -> list[dict[str, Any]]:
-    """Scored jobs worth applying to that we haven't already handled."""
+    """Scored jobs worth applying to that we haven't already handled, freshest first.
+
+    Ordering is by posting age bucket BEFORE score, deliberately: being early to a posting
+    moves the needle on getting a reply far more than a few points of match score do. A job
+    posted today at 80 is a better use of a slot than a three-month-old one at 92, which has
+    likely already got a full pipeline of candidates (or is stale and unfilled for a reason).
+    Within a bucket, the best match wins.
+    """
     thresholds = config.search()["thresholds"]
     rows = conn.execute(
-        """SELECT j.id, j.company, j.title, j.apply_url, j.source_ats, s.total, s.tier
+        """SELECT j.id, j.company, j.title, j.apply_url, j.source_ats, j.posted_at,
+                  s.total, s.tier,
+                  CAST(julianday('now') - julianday(j.posted_at) AS INTEGER) AS age_days
            FROM jobs j
            JOIN scores s ON s.job_id = j.id
            LEFT JOIN applications a ON a.job_id = j.id
@@ -69,7 +78,15 @@ def selectable_jobs(conn, limit: int) -> list[dict[str, Any]]:
              AND s.tier != 'skip'
              AND s.total >= ?
              AND (a.id IS NULL OR a.status = 'queued')
-           ORDER BY s.total DESC
+           ORDER BY
+             CASE
+               WHEN j.posted_at IS NULL THEN 4
+               WHEN julianday('now') - julianday(j.posted_at) <= 3  THEN 0
+               WHEN julianday('now') - julianday(j.posted_at) <= 7  THEN 1
+               WHEN julianday('now') - julianday(j.posted_at) <= 21 THEN 2
+               ELSE 3
+             END,
+             s.total DESC
            LIMIT ?""",
         (thresholds["skip_below"], limit),
     ).fetchall()

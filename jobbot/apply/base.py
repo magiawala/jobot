@@ -32,6 +32,8 @@ CAPTCHA_FRAME_HINTS = ["recaptcha/api2/anchor", "recaptcha/enterprise/anchor", "
 CAPTCHA_CHALLENGE_HINTS = ["recaptcha/api2/bframe", "hcaptcha.com/challenge"]
 LOGIN_WALL_TEXTS = ["sign in to apply", "log in to apply", "create an account to apply",
                     "please sign in", "please log in", "sign up to continue"]
+PRESUBMIT_CHECK_FAILED = "pre-submit validation could not run (blocked as a precaution)"
+
 CLOSED_POSTING_TEXTS = ["no longer accepting applications", "this job is no longer",
                         "position has been filled", "posting is closed", "couldn't find anything here",
                         "404 error", "job posting you're looking for"]
@@ -277,6 +279,32 @@ class BaseApplyAdapter:
     def submit(self) -> bool:
         raise NotImplementedError
 
+    def empty_required_fields(self) -> list[str]:
+        """Required fields still empty, read from the DOM right before an irreversible submit.
+
+        The adapter's own `unanswered` list is only as good as its scanner, and a widget the
+        scanner cannot see is invisible to it - Ashby's <button> yes/no toggles were exactly
+        that, leaving three required questions blank while the run reported unanswered=0.
+
+        FAILS CLOSED. If the check itself cannot run, it reports a sentinel blocker rather than
+        an empty list: an earlier version returned [] on error, which the caller read as "clear
+        to submit" - a safety gate that silently disables itself is worse than none.
+        """
+        try:
+            script = (Path(__file__).parent / "js" / "empty_required.js").read_text(encoding="utf-8")
+        except OSError as e:
+            logger.error("pre-submit validation script missing: %s", e)
+            return [PRESUBMIT_CHECK_FAILED]
+        try:
+            result = self.page.evaluate(script)
+        except Exception as e:  # noqa: BLE001
+            logger.error("pre-submit validation could not run (blocking submit): %s", e)
+            return [PRESUBMIT_CHECK_FAILED]
+        if not isinstance(result, list):
+            logger.error("pre-submit validation returned %r (blocking submit)", type(result))
+            return [PRESUBMIT_CHECK_FAILED]
+        return [str(x) for x in result]
+
     def confirm_submitted(self) -> bool:
         """After clicking submit, look for a confirmation signal."""
         try:
@@ -314,6 +342,12 @@ def apply_to_job(job: dict[str, Any], adapter_cls: type[BaseApplyAdapter], profi
             should_submit = allow_submit or (mode == "AUTO")
             if mode == "DRY_RUN":
                 should_submit = False
+            # Dream companies always wait for a human, even in AUTO - you get one shot at these
+            # and an auto-filled essay isn't worth burning Figma/Linear/Notion on.
+            if should_submit and not allow_submit and job.get("tier") == "dream_review":
+                logger.info("job %s is a dream company - holding for review despite AUTO", job.get("id"))
+                return FillResult(status="filled_awaiting_review", filled=adapter.filled,
+                                  unanswered=adapter.unanswered, screenshot_path=str(shot))
             if adapter.unanswered and any(u.startswith("REQUIRED") for u in adapter.unanswered):
                 return FillResult(status="needs_human", filled=adapter.filled,
                                   unanswered=adapter.unanswered, screenshot_path=str(shot),
@@ -322,6 +356,17 @@ def apply_to_job(job: dict[str, Any], adapter_cls: type[BaseApplyAdapter], profi
                 status = "filled_awaiting_review" if mode == "REVIEW" else "skipped"
                 return FillResult(status=status, filled=adapter.filled, unanswered=adapter.unanswered,
                                   screenshot_path=str(shot))
+
+            # Last gate before an irreversible action: read the page, don't trust our own list.
+            empty = adapter.empty_required_fields()
+            if empty:
+                logger.warning("refusing to submit job %s - %d required field(s) still empty: %s",
+                               job.get("id"), len(empty), "; ".join(empty[:5]))
+                return FillResult(
+                    status="needs_human", filled=adapter.filled,
+                    unanswered=adapter.unanswered + [f"REQUIRED (empty at submit): {e}" for e in empty],
+                    screenshot_path=str(shot),
+                    error=f"{len(empty)} required field(s) still empty at submit time")
 
             polite_pause()
             adapter.submit()
