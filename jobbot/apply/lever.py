@@ -174,6 +174,4 @@ class LeverAdapter(BaseApplyAdapter):
                 logger.debug("lever eeo %s failed: %s", field_name, e)
 
     def submit(self) -> bool:
-        btn = self.page.locator('button[type="submit"], #btn-submit, .postings-btn[type="submit"]').first
-        btn.click()
-        return True
+        return self.click_submit('#btn-submit, .postings-btn[type="submit"], button[type="submit"]')

@@ -294,6 +294,33 @@ class BaseApplyAdapter:
             self.page.wait_for_timeout(1000)
         raise NeedsHuman("application form did not render (no input fields found)")
 
+    def click_submit(self, selector: str) -> bool:
+        """Scrolls the submit button into view, waits for it to be enabled, then clicks.
+
+        These buttons sit below the fold (measured at y=1066 in a 1000px viewport), and are
+        React onClick handlers rather than native form submits - so a click that misses fails
+        silently, with the form left filled and no error anywhere.
+        """
+        btn = self.page.locator(selector).first
+        if btn.count() == 0:
+            raise NeedsHuman(f"no submit button matched {selector!r}")
+        btn.scroll_into_view_if_needed(timeout=10000)
+        self.page.wait_for_timeout(400)
+
+        deadline = time.time() + 15
+        while time.time() < deadline:
+            try:
+                if btn.is_enabled():
+                    break
+            except Exception:  # noqa: BLE001
+                pass
+            self.page.wait_for_timeout(1000)
+        else:
+            raise NeedsHuman("submit button never became enabled")
+
+        btn.click(timeout=15000)
+        return True
+
     def fill(self) -> None:
         raise NotImplementedError
 
@@ -339,6 +366,11 @@ class BaseApplyAdapter:
                    "your application has been", "application complete"]
         deadline = time.time() + timeout_s
         while time.time() < deadline:
+            # Strongest signal first: the ATS accepted a POST to its own application endpoint.
+            for status, url in getattr(self, "submit_posts", []):
+                if 200 <= status < 300:
+                    logger.info("submission confirmed by %s POST to %s", status, url[:90])
+                    return True
             try:
                 body = (self.page.inner_text("body") or "").lower()
                 if any(m in body for m in markers):
@@ -384,7 +416,27 @@ def apply_to_job(job: dict[str, Any], adapter_cls: type[BaseApplyAdapter], profi
         browser = p.chromium.launch(headless=not headed)
         context = browser.new_context(viewport={"width": 1440, "height": 1000})
         page = context.new_page()
+
+        # Definitive submission evidence. Reading the page after clicking turned out to be
+        # unreliable in both directions - it reported empty forms as submitted, and gave no way
+        # to tell a real submission from a click that went nowhere (these boards don't all send
+        # applicant confirmation emails, so "no email" doesn't settle it either). A 2xx POST to
+        # the ATS's own application endpoint does.
+        submit_posts: list[tuple[int, str]] = []
+
+        def _record(response) -> None:
+            try:
+                if response.request.method != "POST":
+                    return
+                url = response.url.lower()
+                if any(k in url for k in ("application", "apply", "submit", "graphql")):
+                    submit_posts.append((response.status, response.url[:160]))
+            except Exception:  # noqa: BLE001
+                pass
+
+        page.on("response", _record)
         adapter = adapter_cls(page, profile, resume_pdf, mode=mode, job=job)
+        adapter.submit_posts = submit_posts
         shot: Path | None = None
         try:
             adapter.open(job["apply_url"])

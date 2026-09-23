@@ -255,6 +255,4 @@ class AshbyAdapter(BaseApplyAdapter):
         return False
 
     def submit(self) -> bool:
-        btn = self.page.locator('button[type="submit"], button:has-text("Submit Application")').first
-        btn.click()
-        return True
+        return self.click_submit('button:has-text("Submit Application"), button[type="submit"]')

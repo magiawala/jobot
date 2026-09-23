@@ -184,6 +184,4 @@ class GreenhouseAdapter(BaseApplyAdapter):
                 logger.debug("eeo %s failed: %s", field_id, e)
 
     def submit(self) -> bool:
-        btn = self.page.locator('button[type="submit"]').first
-        btn.click()
-        return True
+        return self.click_submit('button[type="submit"], button:has-text("Submit Application")')

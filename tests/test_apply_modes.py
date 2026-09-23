@@ -53,6 +53,10 @@ def patched(monkeypatch, tmp_path):
             # stands in for the pre-submit DOM scan: no empty required fields
             return []
 
+        def on(self, *a, **kw):
+            # network listener used to confirm submissions; nothing to record in tests
+            return None
+
     class FakeContext:
         def new_page(self):
             return FakePage()
