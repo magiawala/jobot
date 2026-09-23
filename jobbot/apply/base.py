@@ -305,16 +305,41 @@ class BaseApplyAdapter:
             return [PRESUBMIT_CHECK_FAILED]
         return [str(x) for x in result]
 
-    def confirm_submitted(self) -> bool:
-        """After clicking submit, look for a confirmation signal."""
-        try:
-            self.page.wait_for_load_state("networkidle", timeout=20000)
-        except PWTimeout:
-            pass
-        body = (self.page.inner_text("body") or "").lower()
+    def confirm_submitted(self, timeout_s: int = 45) -> bool:
+        """Polls for a submission confirmation instead of checking once.
+
+        Ashby keeps the button in a spinner state for several seconds after the click; the
+        first version checked once after a 20s networkidle wait and reported "no confirmation"
+        while the request was still in flight, which recorded a probably-successful application
+        as failed - and a failed application is eligible to be retried, i.e. submitted twice.
+        """
         markers = ["thank you", "application received", "application submitted", "we've received",
-                   "thanks for applying", "successfully submitted"]
-        return any(m in body for m in markers)
+                   "we have received", "thanks for applying", "successfully submitted",
+                   "your application has been", "application complete"]
+        deadline = time.time() + timeout_s
+        while time.time() < deadline:
+            try:
+                body = (self.page.inner_text("body") or "").lower()
+                if any(m in body for m in markers):
+                    return True
+                # the form itself disappearing is Ashby/Lever's other success signal
+                if self._submit_button_gone():
+                    return True
+            except Exception:  # noqa: BLE001 - navigation mid-poll
+                pass
+            self.page.wait_for_timeout(1500)
+        return False
+
+    def _submit_button_gone(self) -> bool:
+        try:
+            return self.page.evaluate("""() => {
+              const btns = Array.from(document.querySelectorAll('button[type=submit], button'))
+                .filter(b => /submit application|submit$/i.test((b.innerText||'').trim()));
+              if (!btns.length) return true;          // form replaced by a confirmation
+              return btns.every(b => b.disabled && !/submitting|sending/i.test(b.innerText||''));
+            }""")
+        except Exception:  # noqa: BLE001
+            return False
 
 
 def apply_to_job(job: dict[str, Any], adapter_cls: type[BaseApplyAdapter], profile: dict[str, Any],
@@ -376,8 +401,12 @@ def apply_to_job(job: dict[str, Any], adapter_cls: type[BaseApplyAdapter], profi
             if ok:
                 return FillResult(status="submitted", filled=adapter.filled, screenshot_path=str(shot_after),
                                   submitted=True)
-            return FillResult(status="failed", filled=adapter.filled, screenshot_path=str(shot_after),
-                              error="no submission confirmation detected")
+            # The click landed but we could not confirm. Do NOT call this "failed": failed work
+            # is eligible for retry, and retrying an application that actually went through
+            # submits it twice. Surface it for a human instead.
+            return FillResult(status="submitted_unconfirmed", filled=adapter.filled,
+                              screenshot_path=str(shot_after),
+                              error="submitted but no confirmation detected - verify before retrying")
 
         except PostingClosed as e:
             return FillResult(status="skipped", error=f"posting closed: {e}")

@@ -147,6 +147,8 @@ def run_once(skip_discovery: bool = False, max_apps: int | None = None,
                 counts["filled"] += 1
             elif result.status == "needs_human":
                 counts["needs_human"] += 1
+            elif result.status == "submitted_unconfirmed":
+                counts["submitted_unconfirmed"] = counts.get("submitted_unconfirmed", 0) + 1
             elif result.status == "failed":
                 counts["failed"] += 1
                 if result.error:
