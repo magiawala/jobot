@@ -94,3 +94,20 @@ def test_options_are_captured_so_dropdowns_can_be_answered():
     learned.record_pending("Language Skill(s)", ats="lever", options=["English (ENG)", "Spanish (SPA)"])
     entry = learned.load()["pending"][0]
     assert entry["options"] == ["English (ENG)", "Spanish (SPA)"]
+
+
+# ---- EEO matching precision ----
+
+@pytest.mark.parametrize("label,expected", [
+    # the false positive: "ability" scored 82% against "disability" via partial_ratio and wrote
+    # the EEO decline answer into a free-text box on a real application
+    ("Please add up to three bullets showing exceptional ability", None),
+    ("What is your design process?", None),
+    ("Disability Status", "disability_status"),
+    ("Do you have a disability?", "disability_status"),
+    ("Voluntary Self-Identification of Disability", "disability_status"),
+    ("Veteran Status", "veteran_status"),
+    ("Are you Hispanic/Latino?", "hispanic_latino"),
+])
+def test_eeo_matching_requires_a_word_boundary(label, expected):
+    assert classify_label(label)[0] == expected

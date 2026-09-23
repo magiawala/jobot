@@ -102,7 +102,10 @@ EEO_PATTERNS: dict[str, list[str]] = {
     "race_ethnicity": ["race", "ethnicity", "racial", "ethnic background"],
     "hispanic_latino": ["hispanic", "latino", "latinx"],
     "veteran_status": ["veteran", "protected veteran", "military service"],
-    "disability_status": ["disability", "disabled", "disability status"],
+    # "disability" must be matched as a whole word: partial_ratio scored "exceptional ability"
+    # at 82% against "disability" and filled a free-text answer box with "decline".
+    "disability_status": ["disability status", "voluntary self identification of disability",
+                          "do you have a disability", "disabled"],
     "sexual_orientation": ["sexual orientation"],
     "transgender": ["transgender", "gender identity expression"],
 }
@@ -145,8 +148,17 @@ def classify_label(label: str) -> tuple[str | None, bool, int]:
         return None, False, 0
 
     best_key, best_score, best_eeo = None, 0, False
+    # EEO matching deliberately avoids partial_ratio. It scores on the best matching SUBSTRING,
+    # so "exceptional ability" hit "disability" at 82% and wrote the EEO decline answer into a
+    # free-text box. These fields answer "decline", so a false positive corrupts a real answer -
+    # require the phrase's distinctive word to appear on a word boundary.
     for key, phrasings in EEO_PATTERNS.items():
         for phrase in phrasings:
+            head = phrase.split()[0]
+            if not re.search(rf"\b{re.escape(head)}", norm):
+                continue
+            # the boundary guard above is what prevents the false positive, so the score itself
+            # can stay loose enough for short labels like "Are you Hispanic/Latino?"
             score = max(fuzz.partial_ratio(norm, phrase), fuzz.token_set_ratio(norm, phrase))
             if score > best_score:
                 best_key, best_score, best_eeo = key, score, True
