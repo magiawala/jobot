@@ -128,8 +128,14 @@ class AshbyAdapter(BaseApplyAdapter):
             self.record_unanswered(label, is_required(label))
 
     def _fill_location(self) -> None:
-        """Ashby's Location is an input[role=combobox] with no id or name, backed by a
-        suggestion list. Typing alone leaves it unset, so we pick a suggestion and verify."""
+        """Ashby's Location is an input[role=combobox] with no id or name, backed by a remote
+        suggestion list. Typing alone leaves it unset.
+
+        Selection is done with ArrowDown+Enter rather than clicking an option: a
+        `[class*=option]` click target also matches the yes/no toggle buttons and radio labels
+        on the same page, so the click landed on the wrong element. Verified on a live Patreon
+        posting - keyboard selection resolves "Boston" to "Boston, Massachusetts, United States".
+        """
         value = self.answers.get("location") or ""
         if not value:
             return
@@ -138,19 +144,23 @@ class AshbyAdapter(BaseApplyAdapter):
             if box.count() == 0 or not box.is_visible():
                 return
             box.click()
-            box.fill(value)
-            self.page.wait_for_timeout(1500)
-            opt = self.page.locator('[role="option"], [class*="option"]:visible').first
-            if opt.count() > 0 and opt.is_visible():
-                opt.click()
-                self.page.wait_for_timeout(300)
-            if (box.input_value() or "").strip():
-                self.filled["location"] = value
+            box.fill("")
+            box.type(value.split(",")[0], delay=120)   # city alone matches the suggestion list better
+            self.page.wait_for_timeout(2200)
+            self.page.keyboard.press("ArrowDown")
+            self.page.wait_for_timeout(250)
+            self.page.keyboard.press("Enter")
+            self.page.wait_for_timeout(500)
+
+            resolved = (box.input_value() or "").strip()
+            if resolved:
+                self.filled["location"] = resolved
                 self.drop_unanswered("Location")
             else:
                 self.record_unanswered("Location", True, kind="combobox")
         except Exception as e:  # noqa: BLE001
             logger.debug("ashby location failed: %s", e)
+            self.record_unanswered("Location", True, kind="combobox")
 
     def _fill_consent_radios(self) -> None:
         """The SMS-consent radio pair sits inside the Phone field entry, so an unanswered

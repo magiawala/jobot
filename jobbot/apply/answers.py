@@ -23,7 +23,8 @@ QUESTION_PATTERNS: dict[str, list[str]] = {
     "last_name": ["last name", "surname", "family name"],
     "full_name": ["full name", "legal name", "your name", "name"],
     "email": ["email", "email address", "e-mail"],
-    "phone": ["phone", "phone number", "mobile", "telephone"],
+    "phone": ["phone", "phone number", "mobile", "telephone", "contact number",
+              "cell phone", "contact phone"],
     # "how did you hear about this opportunity" was matching `location` at 85% on the word
     # "opportunity"/"about" overlap, which would have typed a city into a referral-source field.
     # Location phrasings are kept tight and anchored for that reason.
@@ -58,11 +59,26 @@ QUESTION_PATTERNS: dict[str, list[str]] = {
                        "desired compensation", "base compensation for this role",
                        "compensation requirement", "target compensation"],
     "start_date": ["start date", "when can you start", "earliest start", "available to start",
-                   "notice period"],
+                   "notice period", "timeline for starting", "timeline for starting a new role",
+                   "when would you be able to start"],
     "pronouns": ["pronouns", "preferred pronouns"],
     "willing_to_relocate": ["willing to relocate", "open to relocation", "relocate"],
     "cover_letter": ["cover letter"],
     "additional_info": ["additional information", "anything else", "other information"],
+    # recurring shapes pulled straight from the learn queue
+    "willing_to_travel": ["willing to travel", "able to travel", "comfortable travelling",
+                          "open to travel"],
+    "can_work_onsite": ["able to meet the days in office", "days per week in office",
+                        "able to commute to", "able to work from", "work from our office",
+                        "in office requirement", "hybrid schedule", "onsite requirement",
+                        "currently located in or willing to relocate"],
+    "address_line1": ["home address line 1", "street address", "address line 1"],
+    "address_city": ["home address city", "address city"],
+    "address_state": ["home address state", "address state", "state / province", "state province"],
+    "address_zip": ["home address zip", "zip code", "postal code"],
+    "address_country": ["home address country", "address country", "country of residence"],
+    "uses_ai_tools": ["actively use ai tools", "use ai tooling", "ai tools in your design workflow",
+                      "used ai tooling to accelerate"],
 }
 
 EEO_PATTERNS: dict[str, list[str]] = {
@@ -197,6 +213,17 @@ def build_answer_book(profile: dict[str, Any]) -> AnswerBook:
         "start_date": prefs.get("earliest_start_date", ""),
         "willing_to_relocate": "Yes" if prefs.get("willing_to_relocate") else "No",
         "current_company": std.get("current_company", ""),
+        "willing_to_travel": "Yes" if prefs.get("willing_to_travel") else (
+            "No" if prefs.get("willing_to_travel") is False else ""),
+        "can_work_onsite": "Yes" if (prefs.get("willing_to_relocate")
+                                      or "onsite" in [str(x).lower() for x in (prefs.get("work_setting") or [])]
+                                      or "hybrid" in [str(x).lower() for x in (prefs.get("work_setting") or [])]) else "",
+        "address_line1": (loc.get("address_line1") or ""),
+        "address_city": loc.get("city", ""),
+        "address_state": loc.get("state", ""),
+        "address_zip": loc.get("zip", ""),
+        "address_country": loc.get("country", ""),
+        "uses_ai_tools": std.get("uses_ai_tools", "Yes"),
     }
     values = {k: ("" if v in (None, "TODO", "None") else str(v)) for k, v in values.items()}
     eeo = {k: str(v) for k, v in (profile.get("eeo") or {}).items()}
@@ -255,6 +282,19 @@ def derive_answer(label: str, profile: dict[str, Any]) -> str | None:
         for other in US_STATE_NAMES:
             if other in norm:
                 return "Yes" if other == state_name else "No"
+
+    prefs = profile.get("preferences") or {}
+    settings = [str(x).lower() for x in (prefs.get("work_setting") or [])]
+
+    # "able to meet the 3 days in office", "able to commute to the Bay Area 2 days per week"
+    if any(k in norm for k in ("days in office", "days per week", "able to commute",
+                                "able to work from", "in office", "onsite")):
+        if "onsite" in settings or "hybrid" in settings or prefs.get("willing_to_relocate"):
+            return "Yes"
+
+    if "willing to travel" in norm or "able to travel" in norm:
+        if prefs.get("willing_to_travel") is not None:
+            return "Yes" if prefs.get("willing_to_travel") else "No"
 
     if "are you based in the us" in norm or "located in the united states" in norm \
             or "authorized to work in the united states" in norm:

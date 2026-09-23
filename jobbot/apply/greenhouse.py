@@ -101,20 +101,62 @@ class GreenhouseAdapter(BaseApplyAdapter):
         except Exception:  # noqa: BLE001
             return False
 
+    def _listbox_for(self, el):
+        """Returns a locator for THIS combobox's options.
+
+        A page-global [role=option] query is wrong here: Greenhouse renders an
+        international phone-number widget whose country list is also [role=option], so every
+        dropdown was reading "Afghanistan+93, Aland Islands+358, ..." instead of its own
+        choices - which is why work authorization kept failing on Greenhouse specifically.
+        """
+        for attr in ("aria-controls", "aria-owns"):
+            try:
+                target = el.get_attribute(attr)
+            except Exception:  # noqa: BLE001
+                target = None
+            if target:
+                scoped = self.page.locator(f'#{target} [role="option"], #{target} li')
+                if scoped.count():
+                    return scoped
+        # fall back to options inside the combobox's own field wrapper
+        try:
+            handle = el.element_handle()
+            if handle:
+                container = handle.evaluate_handle(
+                    "e => e.closest('[class*=select], [class*=field], [data-field]') || e.parentElement")
+                if container:
+                    scoped = container.as_element().query_selector_all('[role="option"]')
+                    if scoped:
+                        return scoped
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+
     def _pick_from_listbox(self, selector: str, desired: str, label: str) -> None:
         try:
             el = self.page.locator(selector).first
             el.click()
             self.page.wait_for_timeout(700)
-            opts = self.page.locator('[role="option"]')
-            texts = [opts.nth(i).inner_text().strip() for i in range(min(opts.count(), 60))]
+            scoped = self._listbox_for(el)
+            if scoped is None:
+                self.record_unanswered(label, is_required(label), kind="select")
+                self.page.keyboard.press("Escape")
+                return
+            if isinstance(scoped, list):
+                texts = [(h.inner_text() or "").strip() for h in scoped[:60]]
+                opts = scoped
+            else:
+                opts = scoped
+                texts = [opts.nth(i).inner_text().strip() for i in range(min(opts.count(), 60))]
             choice = pick_option(texts, desired, strict=self.is_strict_label(label))
             if choice is None:
                 self.record_unanswered(label, is_required(label), options=texts, kind="select")
                 self.page.keyboard.press("Escape")
                 return
-            opts.nth(texts.index(choice)).click()
+            idx = texts.index(choice)
+            (opts[idx] if isinstance(opts, list) else opts.nth(idx)).click()
             self.filled[label[:50]] = choice
+            self.drop_unanswered(label)
         except Exception as e:  # noqa: BLE001
             logger.debug("listbox pick failed for %s: %s", label[:40], e)
             self.record_unanswered(label, is_required(label))
