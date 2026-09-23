@@ -38,7 +38,8 @@ QUESTION_PATTERNS: dict[str, list[str]] = {
     "current_company": ["current company", "current employer", "company"],
     "how_did_you_hear": ["how did you hear about us", "how did you find", "referral source",
                          "how did you hear about this", "how did you hear about this opportunity",
-                         "how did you learn about", "where did you hear about"],
+                         "how did you learn about", "where did you hear about",
+                         "hear about us as an employer", "hear about this company"],
     "work_authorization": ["are you authorized to work", "authorized to work", "work authorization",
                            "legally authorized", "eligible to work",
                            "do you have a legal right to work", "legal right to work",
@@ -65,6 +66,21 @@ QUESTION_PATTERNS: dict[str, list[str]] = {
     "willing_to_relocate": ["willing to relocate", "open to relocation", "relocate"],
     "cover_letter": ["cover letter"],
     "additional_info": ["additional information", "anything else", "other information"],
+    # Legal checkboxes every application requires: privacy-policy notices, GDPR disclaimers,
+    # accuracy certifications and standard confidentiality affirmations. Enabled by Devanshu
+    # 2026-09-23. Pattern-based rather than per-company so a new employer's wording doesn't
+    # re-block the queue; each acceptance is still recorded in the application's filled answers.
+    "legal_acknowledgement": [
+        "acknowledge that you have read", "acknowledge that you've read",
+        "please acknowledge that you have read and understand",
+        "read and understood", "recruitment privacy policy", "applicant privacy notice",
+        "privacy policy", "gdpr disclaimer", "data protection notice",
+        "certifying that to the best of my knowledge", "information i have provided is true",
+        "true and correct", "i understand affirm and agree",
+        "prohibited from taking using or disclosing", "acknowledge my continuing legal obligations",
+        "will not make use of nor disclose", "agree to the affirmations above",
+        "may contact additional references",
+    ],
     # recurring shapes pulled straight from the learn queue
     "willing_to_travel": ["willing to travel", "able to travel", "comfortable travelling",
                           "open to travel"],
@@ -224,6 +240,11 @@ def build_answer_book(profile: dict[str, Any]) -> AnswerBook:
         "address_zip": loc.get("zip", ""),
         "address_country": loc.get("country", ""),
         "uses_ai_tools": std.get("uses_ai_tools", "Yes"),
+        # "Yes" is what these checkboxes/radios offer; pick_option maps it onto
+        # "I agree" / "Acknowledge/Agree" style option text via the synonym table.
+        "legal_acknowledgement": "Yes" if std.get("auto_accept_legal", True) else "",
+        "needs_relocation_assistance": std.get("needs_relocation_assistance", "No"),
+        "clearance_eligible": std.get("clearance_eligible", ""),
     }
     values = {k: ("" if v in (None, "TODO", "None") else str(v)) for k, v in values.items()}
     eeo = {k: str(v) for k, v in (profile.get("eeo") or {}).items()}
@@ -307,6 +328,9 @@ def derive_answer(label: str, profile: dict[str, Any]) -> str | None:
 # When the configured answer matches no offered option, try these equivalents in order. Real
 # example: profile says "Company Website" but Patreon's list offers "Careers Page".
 OPTION_SYNONYMS: dict[str, list[str]] = {
+    # consent checkboxes label their affirmative option many different ways
+    "yes": ["i agree", "acknowledge/agree", "acknowledge", "agree", "i acknowledge",
+            "i understand", "i accept", "accept", "i consent", "confirmed"],
     "company website": ["careers page", "company site", "company career site", "job board",
                         "career site", "website", "other"],
     "careers page": ["company website", "company site", "website", "other"],

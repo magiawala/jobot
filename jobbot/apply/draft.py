@@ -30,7 +30,9 @@ DRAFTABLE_PATTERNS = re.compile(
     r"tell (us|me) about (a|your|yourself)|describe (a|your) (project|experience|time)|"
     r"favou?rite project|proudest|what does .{0,40} mean (to you|in your)|"
     r"how do you (approach|think about|use)|walk us through|"
-    r"what (is|are) your (approach|strengths|design process)",
+    r"what (is|are) your (approach|strengths|design process)|"
+    # bare "Why <Company>?" and "what encouraged you to apply" - both seen on live postings
+    r"^\s*why\s+[a-z0-9][\w .&'-]{1,30}\?*\s*$|what (encouraged|drew|attracted) you",
     re.I,
 )
 
