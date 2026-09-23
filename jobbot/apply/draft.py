@@ -26,6 +26,14 @@ logger = log.get("apply.draft")
 DRAFTABLE_PATTERNS = re.compile(
     r"why (do you )?(want to |are you )?(join|work|apply|interested)|why this (company|role|team)|"
     r"why (are you interested|us\b)|what (excites|interests) you|tell us why|"
+    # the company name sits between "what about this role at" and "interests you", so the
+    # contiguous "what interests you" form above never matched it
+    r"about (this|the) role.{0,40}(interest|excite|appeal)|"
+    r"what (type|kind) of work do you (hope|want|expect)|"
+    # "add up to three bullets showing exceptional ability" - asks for achievements, which
+    # master.json holds; grounded in real bullets rather than invented
+    r"bullets?.{0,40}(exceptional|ability|achievement|accomplishment|impact)|"
+    r"(highlight|summari[sz]e).{0,30}(your|achievement|accomplishment|impact)|"
     r"(project|work|accomplishment)s? (you(\'re| are)? )?(most )?proud of|"
     r"tell (us|me) about (a|your|yourself)|describe (a|your) (project|experience|time)|"
     r"favou?rite project|proudest|what does .{0,40} mean (to you|in your)|"

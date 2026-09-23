@@ -7,6 +7,8 @@
 """
 from __future__ import annotations
 
+import re
+
 from .. import log
 from .answers import is_required, pick_option
 from .base import BaseApplyAdapter
@@ -27,6 +29,7 @@ class AshbyAdapter(BaseApplyAdapter):
         self._fill_location()
         self._fill_labeled_fields()
         self._fill_yesno_buttons()
+        self._fill_choice_fieldsets()
         self._fill_consent_radios()
 
     def _field_blocks(self) -> list[dict]:
@@ -161,6 +164,116 @@ class AshbyAdapter(BaseApplyAdapter):
         except Exception as e:  # noqa: BLE001
             logger.debug("ashby location failed: %s", e)
             self.record_unanswered("Location", True, kind="combobox")
+
+    def _choice_fieldsets(self) -> list[dict]:
+        """Ashby puts radio/checkbox questions in a <fieldset> whose required marker is a CSS
+        ::after on its label, and whose question text is NOT on the inputs themselves - each
+        input's own label is the option text ("Backend Engineer"). Reading labels per-input
+        therefore classifies the option, never the question, which is why four required groups
+        on a live Infisical posting were filled with nothing at all.
+        """
+        return self.page.evaluate("""() => {
+          const out = [];
+          document.querySelectorAll('fieldset').forEach((fs, idx) => {
+            const inputs = fs.querySelectorAll('input[type=radio], input[type=checkbox]');
+            if (!inputs.length) return;
+            const lab = fs.querySelector('label');
+            let required = false;
+            if (lab) {
+              try { required = /[*\\u271A]/.test(getComputedStyle(lab, '::after').content || ''); }
+              catch (_) {}
+              if (/_required/.test((lab.className || '').toString())) required = true;
+            }
+            const question = (fs.innerText || '').split('\\n').map(s => s.trim()).filter(Boolean)[0] || '';
+            const options = Array.from(inputs).map(i => {
+              const l = (i.labels && i.labels[0]) ? i.labels[0].innerText.trim() :
+                        (i.closest('label') ? i.closest('label').innerText.trim() : '');
+              return l;
+            });
+            out.push({
+              idx, question: question.slice(0, 180), required,
+              multi: inputs[0].type === 'checkbox',
+              answered: Array.from(inputs).some(i => i.checked),
+              options,
+            });
+          });
+          return out;
+        }""")
+
+    def _fill_choice_fieldsets(self) -> None:
+        skills = [str(s) for s in ((self.profile.get("standard_answers") or {})
+                                   .get("technical_skills") or [])]
+        for fs in self._choice_fieldsets():
+            if fs["answered"] or not fs["question"]:
+                continue
+            q, opts = fs["question"], [o for o in fs["options"] if o]
+            if not opts:
+                continue
+
+            if fs["multi"]:
+                wanted = self._multi_choice_values(q, skills)
+                picked = [o for o in opts
+                          if any(pick_option([o], w) for w in wanted)]
+                limit = self._select_limit(q)
+                if limit:
+                    picked = picked[:limit]
+                if picked:
+                    self._check_options(fs["idx"], picked)
+                    self.filled[q[:50]] = ", ".join(picked)
+                    self.drop_unanswered(q)
+                elif fs["required"]:
+                    self.record_unanswered(q, True, options=opts, kind="multiselect")
+                continue
+
+            answer, eeo = self.answer_for_label(q)
+            choice = pick_option(opts, answer, eeo=eeo, strict=self.is_strict_label(q)) if answer else None
+            if choice is None:
+                if fs["required"]:
+                    self.record_unanswered(q, True, options=opts, kind="radio")
+                continue
+            self._check_options(fs["idx"], [choice])
+            self.filled[q[:50]] = choice
+            self.drop_unanswered(q)
+
+    @staticmethod
+    def _select_limit(question: str) -> int | None:
+        """'(Select 3)' means exactly three - checking every match would be rejected."""
+        m = re.search(r"select\s+(\d+)", question, re.I)
+        return int(m.group(1)) if m else None
+
+    def _multi_choice_values(self, question: str, skills: list[str]) -> list[str]:
+        """What to tick for a 'select all that apply'. A learned answer wins (comma-separated);
+        otherwise a skills question draws on the profile's own skills list."""
+        from .learned import find_answer
+
+        learned = find_answer(question)
+        if learned:
+            return [v.strip() for v in learned.split(",") if v.strip()]
+        if re.search(r"languages?|frameworks?|technolog|tools|proficient|skills", question, re.I):
+            return skills
+        if re.search(r"(important|matter|motivat|value).{0,25}(to you|most)", question, re.I):
+            return [str(v) for v in ((self.profile.get("standard_answers") or {})
+                                     .get("important_factors") or [])]
+        return []
+
+    def _check_options(self, fieldset_idx: int, option_texts: list[str]) -> None:
+        try:
+            self.page.evaluate(
+                """([idx, wanted]) => {
+                  const fs = document.querySelectorAll('fieldset')[idx];
+                  if (!fs) return;
+                  const inputs = fs.querySelectorAll('input[type=radio], input[type=checkbox]');
+                  inputs.forEach(i => {
+                    const l = (i.labels && i.labels[0]) ? i.labels[0].innerText.trim() :
+                              (i.closest('label') ? i.closest('label').innerText.trim() : '');
+                    if (wanted.includes(l) && !i.checked) i.click();
+                  });
+                }""",
+                [fieldset_idx, option_texts],
+            )
+            self.page.wait_for_timeout(200)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("checking options in fieldset %s failed: %s", fieldset_idx, e)
 
     def _fill_consent_radios(self) -> None:
         """The SMS-consent radio pair sits inside the Phone field entry, so an unanswered

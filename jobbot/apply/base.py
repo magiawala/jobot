@@ -462,9 +462,19 @@ def apply_to_job(job: dict[str, Any], adapter_cls: type[BaseApplyAdapter], profi
                                   unanswered=adapter.unanswered, screenshot_path=str(shot),
                                   error="unanswered required question(s)")
             if not should_submit:
+                # Run the DOM check here too, even though nothing will be submitted. Without it
+                # DRY_RUN reported "8 filled, 0 unanswered" on a form with four blank required
+                # questions - the adapter only knows about fields it managed to see, so a
+                # dry run that skips this check overstates how ready the application is.
+                empty_now = adapter.empty_required_fields()
                 status = "filled_awaiting_review" if mode == "REVIEW" else "skipped"
-                return FillResult(status=status, filled=adapter.filled, unanswered=adapter.unanswered,
-                                  screenshot_path=str(shot))
+                if empty_now:
+                    status = "needs_human"
+                return FillResult(
+                    status=status, filled=adapter.filled,
+                    unanswered=adapter.unanswered + [f"REQUIRED (empty in form): {e}" for e in empty_now],
+                    screenshot_path=str(shot),
+                    error=f"{len(empty_now)} required field(s) still empty" if empty_now else None)
 
             # A form we filled nothing into is never a real application, whatever the DOM scan
             # says - an empty page trivially has no empty required fields, which is exactly how

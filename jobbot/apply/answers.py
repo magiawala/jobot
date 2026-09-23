@@ -95,6 +95,8 @@ QUESTION_PATTERNS: dict[str, list[str]] = {
     "address_country": ["home address country", "address country", "country of residence"],
     "uses_ai_tools": ["actively use ai tools", "use ai tooling", "ai tools in your design workflow",
                       "used ai tooling to accelerate"],
+    "primary_expertise": ["describe your primary expertise", "primary expertise as an engineer",
+                          "which best describes your expertise", "primary discipline"],
 }
 
 EEO_PATTERNS: dict[str, list[str]] = {
@@ -252,6 +254,7 @@ def build_answer_book(profile: dict[str, Any]) -> AnswerBook:
         "address_zip": loc.get("zip", ""),
         "address_country": loc.get("country", ""),
         "uses_ai_tools": std.get("uses_ai_tools", "Yes"),
+        "primary_expertise": std.get("primary_expertise", ""),
         # "Yes" is what these checkboxes/radios offer; pick_option maps it onto
         # "I agree" / "Acknowledge/Agree" style option text via the synonym table.
         "legal_acknowledgement": "Yes" if std.get("auto_accept_legal", True) else "",
@@ -334,6 +337,19 @@ def derive_answer(label: str, profile: dict[str, Any]) -> str | None:
         country = (loc.get("country") or "").lower()
         if "united states" in country:
             return "Yes"
+
+    # Region-eligibility questions ("Do you live and work in the Americas?", "... in EMEA?").
+    # The US is in the Americas, so a US-based applicant answers Yes to that one and No to the
+    # regions it is not in - answerable from the profile without asking.
+    if "live and work in" in norm or "do you reside in" in norm or "based in" in norm:
+        country = (loc.get("country") or "").lower()
+        if "united states" in country:
+            if any(r in norm for r in ("americas", "north america", "united states", "us or canada",
+                                       "united states or canada", "usa")):
+                return "Yes"
+            if any(r in norm for r in ("emea", "europe", "apac", "asia pacific", "latam",
+                                       "latin america", "africa", "middle east", "australia")):
+                return "No"
     return None
 
 
@@ -343,7 +359,8 @@ OPTION_SYNONYMS: dict[str, list[str]] = {
     # consent checkboxes label their affirmative option many different ways
     "yes": ["i agree", "acknowledge/agree", "acknowledge", "agree", "i acknowledge",
             "i understand", "i accept", "accept", "i consent", "confirmed"],
-    "company website": ["careers page", "company site", "company career site", "job board",
+    "company website": ["job post or careers page", "careers page", "company site",
+                        "company career site", "job board",
                         "career site", "website", "other"],
     "careers page": ["company website", "company site", "website", "other"],
 }
