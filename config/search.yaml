@@ -23,6 +23,17 @@ title_blocklist: ["Intern", "Graphic Designer", "Instructional Designer", "Inter
                   "Validation Engineer", "Signal Integrity", "Power Supply", "Mixed-Signal", "Mixed Signal",
                   "Embedded", "Wafer", "Lithography", "Optical Engineer", "Mechanical Engineer"]
 
+# Companies to skip entirely. Excluded 2026-09-23 at Devanshu's request: defense and
+# space/aerospace primes gate on US-person status, security-clearance eligibility and ITAR/EAR
+# export controls. Needing future sponsorship makes those roles effectively unreachable, so
+# applying spends slots (and forces citizenship questions JobBot must not answer) for nothing.
+# Matched case-insensitively as a substring of the company name.
+company_blocklist: ["Anduril", "Chariot Defense", "Second Front", "Neros Technologies", "Skydio",
+                    "Primer", "Stoke Space", "Lockheed", "Raytheon", "Northrop", "General Dynamics",
+                    "L3Harris", "Leidos", "Booz Allen", "SAIC", "MITRE", "Shield AI", "Epirus",
+                    "Castelion", "Firestorm", "Hadrian", "True Anomaly", "X-Bow", "Ursa Major",
+                    "Vannevar", "Govini", "Rebellion Defense", "Astranis"]
+
 seniority:
   target: mid
   allowed_title_words: []            # plain titles, e.g. "Product Designer", count as mid

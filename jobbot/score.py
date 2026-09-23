@@ -332,9 +332,20 @@ def company_lookup() -> dict[str, dict[str, Any]]:
     return {c["name"].lower(): c for c in comps}
 
 
-def blocklisted(company: str) -> bool:
-    bl = {b.lower() for b in (config.companies().get("blocklist") or [])}
-    return company.lower() in bl
+def blocklisted(company: str) -> str | None:
+    """Returns the matching blocklist entry, or None.
+
+    Two lists feed this: companies.yaml `blocklist` (exact names) and search.yaml
+    `company_blocklist`, which matches as a SUBSTRING so one entry covers a company's naming
+    variants - "Anduril" catches both "Anduril" and "Anduril Industries" without listing each.
+    """
+    name = (company or "").lower()
+    if name in {b.lower() for b in (config.companies().get("blocklist") or [])}:
+        return company
+    for entry in config.search().get("company_blocklist", []) or []:
+        if entry.lower() in name:
+            return entry
+    return None
 
 
 def score_job(job: sqlite3.Row, cfg: dict[str, Any], keyword_pattern: re.Pattern[str], cat_map: dict[str, str],
@@ -349,8 +360,9 @@ def score_job(job: sqlite3.Row, cfg: dict[str, Any], keyword_pattern: re.Pattern
         return {"total": 0, "tier": "skip", "reasons": reasons + extra_reasons, "role_bucket": role_bucket,
                 "_matched_keywords": matched_kw, **extra}
 
-    if blocklisted(job["company"]):
-        return skip(["company is blocklisted"])
+    hit = blocklisted(job["company"])
+    if hit:
+        return skip([f"company is blocklisted: {hit!r}"])
 
     us_ok, loc_reasons = location_check(job)
     reasons += loc_reasons

@@ -271,7 +271,28 @@ class BaseApplyAdapter:
             self.page.wait_for_load_state("networkidle", timeout=15000)
         except PWTimeout:
             pass
+        self.wait_for_form()
         self.run_safety_checks()
+
+    def wait_for_form(self, timeout_s: int = 25) -> None:
+        """Waits for the application form to actually render before touching it.
+
+        These forms are client-rendered, and running against a not-yet-rendered page produced
+        the worst failure we've seen: zero fields filled, zero required fields detected (there
+        were none in the DOM yet), and a submit that got recorded as successful. Failing loudly
+        here is much better than proceeding against an empty page.
+        """
+        selector = ("input:not([type=hidden]):not([type=search]), textarea, select, "
+                    "button[data-option]")
+        deadline = time.time() + timeout_s
+        while time.time() < deadline:
+            try:
+                if self.page.locator(selector).count() >= 2:
+                    return
+            except Exception:  # noqa: BLE001
+                pass
+            self.page.wait_for_timeout(1000)
+        raise NeedsHuman("application form did not render (no input fields found)")
 
     def fill(self) -> None:
         raise NotImplementedError
@@ -331,12 +352,23 @@ class BaseApplyAdapter:
         return False
 
     def _submit_button_gone(self) -> bool:
+        """True only when the form itself is gone, which on Ashby/Lever means a confirmation
+        replaced it.
+
+        A DISABLED submit button is explicitly NOT success - it means the form rejected the
+        click as incomplete. An earlier version treated `disabled` as confirmation, and recorded
+        four completely empty forms as "submitted": nothing was filled, nothing was sent, and
+        because submitted work is never retried those applications would have been silently lost.
+        """
         try:
             return self.page.evaluate("""() => {
               const btns = Array.from(document.querySelectorAll('button[type=submit], button'))
                 .filter(b => /submit application|submit$/i.test((b.innerText||'').trim()));
-              if (!btns.length) return true;          // form replaced by a confirmation
-              return btns.every(b => b.disabled && !/submitting|sending/i.test(b.innerText||''));
+              if (btns.length) return false;   // still on the form - disabled or not
+              // no submit button anywhere: only a confirmation if the form fields went too
+              const fields = document.querySelectorAll(
+                'input:not([type=hidden]):not([type=search]), textarea, select');
+              return fields.length === 0;
             }""")
         except Exception:  # noqa: BLE001
             return False
@@ -381,6 +413,16 @@ def apply_to_job(job: dict[str, Any], adapter_cls: type[BaseApplyAdapter], profi
                 status = "filled_awaiting_review" if mode == "REVIEW" else "skipped"
                 return FillResult(status=status, filled=adapter.filled, unanswered=adapter.unanswered,
                                   screenshot_path=str(shot))
+
+            # A form we filled nothing into is never a real application, whatever the DOM scan
+            # says - an empty page trivially has no empty required fields, which is exactly how
+            # four blank forms got recorded as submitted.
+            if not adapter.filled:
+                logger.warning("refusing to submit job %s - no fields were filled at all",
+                               job.get("id"))
+                return FillResult(status="needs_human", filled={}, unanswered=adapter.unanswered,
+                                  screenshot_path=str(shot),
+                                  error="no fields were filled - form likely did not render")
 
             # Last gate before an irreversible action: read the page, don't trust our own list.
             empty = adapter.empty_required_fields()
