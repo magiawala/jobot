@@ -423,14 +423,29 @@ def apply_to_job(job: dict[str, Any], adapter_cls: type[BaseApplyAdapter], profi
         # applicant confirmation emails, so "no email" doesn't settle it either). A 2xx POST to
         # the ATS's own application endpoint does.
         submit_posts: list[tuple[int, str]] = []
+        all_posts: list[tuple[int, str, bool]] = []
+
+        # Only an actual submission counts. Matching "graphql" anywhere in the URL was far too
+        # broad: Ashby serves every page-load query over GraphQL, so a routine
+        # `op=ApiOrganizationFromHostedJobsPageName` POST fired on load and was reported as a
+        # confirmed submission for an application that never went out.
+        SUBMIT_OPS = ("submitapplication", "createapplication", "applicationsubmit",
+                      "submitjobapplication", "createcandidate", "submitform")
 
         def _record(response) -> None:
             try:
                 if response.request.method != "POST":
                     return
-                url = response.url.lower()
-                if any(k in url for k in ("application", "apply", "submit", "graphql")):
-                    submit_posts.append((response.status, response.url[:160]))
+                url = response.url
+                low = url.lower()
+                is_submit = any(op in low.replace("_", "") for op in SUBMIT_OPS)
+                if not is_submit and "graphql" not in low:
+                    # non-graphql REST endpoints that are unambiguous
+                    is_submit = any(low.rstrip("/").endswith(p)
+                                    for p in ("/applications", "/apply", "/application"))
+                all_posts.append((response.status, url[:200], is_submit))
+                if is_submit:
+                    submit_posts.append((response.status, url[:200]))
             except Exception:  # noqa: BLE001
                 pass
 
@@ -498,10 +513,22 @@ def apply_to_job(job: dict[str, Any], adapter_cls: type[BaseApplyAdapter], profi
                     error=f"{len(empty)} required field(s) still empty at submit time")
 
             polite_pause()
+            posts_before = len(all_posts)
             adapter.submit()
             ok = adapter.confirm_submitted()
             shot_after = screenshot_path_for(job["id"], "after_submit")
             page.screenshot(path=str(shot_after), full_page=True)
+
+            # Log what the click actually caused. When a submit silently does nothing, this is
+            # the difference between guessing and knowing.
+            after_click = all_posts[posts_before:]
+            if after_click:
+                logger.info("POSTs after submit click (%d):", len(after_click))
+                for status, url, is_submit in after_click[:12]:
+                    logger.info("   %s %s%s", status, url[:120], "  <-- treated as submission" if is_submit else "")
+            else:
+                logger.warning("submit click produced NO network POST at all - the handler did "
+                               "not fire (job %s)", job.get("id"))
             if ok:
                 return FillResult(status="submitted", filled=adapter.filled, screenshot_path=str(shot_after),
                                   submitted=True)
