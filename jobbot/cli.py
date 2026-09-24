@@ -258,10 +258,37 @@ def dashboard(
 @app.command()
 def learn(
     interactive: bool = typer.Option(True, "--interactive/--list", help="Prompt for each, or just list."),
+    auto: bool = typer.Option(False, "--auto", help="Answer what the profile and resume already settle."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="With --auto: show proposals, change nothing."),
+    limit: Optional[int] = typer.Option(None, help="With --auto: cap how many questions to attempt."),
 ) -> None:
     """Answer the questions that blocked applications. Each one you answer here is reused
     automatically on every future posting that asks it, so needs_human shrinks over time."""
     from .apply.learned import LEARNED_PATH, load, promote_answered, save, stats
+
+    if auto:
+        from .apply.autolearn import auto_answer, prune_option_fragments, resolve_locally
+
+        dropped = prune_option_fragments()
+        if dropped:
+            console.print(f"[dim]dropped {dropped} entr(ies) that were option labels, not questions[/]")
+        local = resolve_locally()
+        if local:
+            console.print(f"[dim]{local} already answerable in code - cleared without a Claude call[/]")
+
+        res = auto_answer(limit=limit, dry_run=dry_run)
+        console.print(
+            f"\n[bold]Auto-learn[/] ({res['calls']} Claude call(s), {res['asked']} question(s)): "
+            f"[green]{res['answered_high']} answered[/], "
+            f"[yellow]{res['answered_low']} low-confidence held[/], "
+            f"[dim]{res['unknown']} need you[/]")
+        for q, a, why in res["proposals"][:20]:
+            console.print(f"   [green]{a[:34]}[/] [dim]<- {q}[/]" + (f" [dim]({why})[/]" if why else ""))
+        if dry_run:
+            console.print("\n[yellow]dry run - nothing was saved[/]")
+        s = stats()
+        console.print(f"\n[bold]{s['answered']}[/] active, [bold]{s['pending']}[/] still pending.")
+        return
 
     promoted = promote_answered()
     if promoted:
