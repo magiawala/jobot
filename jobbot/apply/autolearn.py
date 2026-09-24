@@ -80,12 +80,38 @@ def _slim_resume() -> dict[str, Any]:
     }
 
 
+QUESTION_OPENER = re.compile(
+    r"^(what|why|how|who|when|where|which|do|does|did|are|is|was|were|have|has|can|will|would|"
+    r"may|should|please|tell|describe|list|share|briefly|select|enter|provide|confirm|in |i |by |"
+    r"based on|if )",
+    re.I,
+)
+
+
+def looks_like_option_label(text: str) -> bool:
+    """A choice within a question rather than a question itself.
+
+    Greenhouse checkbox groups record each choice as its own entry, so the queue filled up with
+    "Instagram", "Word of mouth", "Monkey MindPong" and "Neuralink Show & Tell". Listing them by
+    name does not generalise - every company has its own - so this is structural: short, no
+    question mark, and not phrased as a question or instruction.
+    """
+    t = (text or "").strip()
+    if not t:
+        return True
+    if OPTION_FRAGMENT.match(t):
+        return True
+    if "?" in t or len(t) > 44:
+        return False
+    return not QUESTION_OPENER.match(t)
+
+
 def prune_option_fragments() -> int:
     """Drops queue entries that are an option label, not a question."""
     data = learned.load()
     before = len(data["pending"])
     data["pending"] = [e for e in data["pending"]
-                       if not OPTION_FRAGMENT.match((e.get("question") or "").strip())]
+                       if not looks_like_option_label(e.get("question") or "")]
     dropped = before - len(data["pending"])
     if dropped:
         learned.save(data)

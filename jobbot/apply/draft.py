@@ -23,31 +23,41 @@ logger = log.get("apply.draft")
 # Deliberately NOT draftable: anything asking for a fact JobBot doesn't have (salary history,
 # visa specifics, notice period, references, security clearance, certifications). Those go to
 # learned_answers.yaml for a one-time human answer instead of being invented.
-DRAFTABLE_PATTERNS = re.compile(
-    r"why (do you )?(want to |are you )?(join|work|apply|interested)|why this (company|role|team)|"
-    r"why (are you interested|us\b)|what (excites|interests) you|tell us why|"
-    # the company name sits between "what about this role at" and "interests you", so the
-    # contiguous "what interests you" form above never matched it
-    r"about (this|the) role.{0,40}(interest|excite|appeal)|"
-    r"what (type|kind) of work do you (hope|want|expect)|"
-    # "add up to three bullets showing exceptional ability" - asks for achievements, which
-    # master.json holds; grounded in real bullets rather than invented
-    r"bullets?.{0,40}(exceptional|ability|achievement|accomplishment|impact)|"
-    r"(highlight|summari[sz]e).{0,30}(your|achievement|accomplishment|impact)|"
-    r"(project|work|accomplishment)s? (you(\'re| are)? )?(most )?proud of|"
-    r"tell (us|me) about (a|your|yourself)|describe (a|your) (project|experience|time)|"
-    r"favou?rite project|proudest|what does .{0,40} mean (to you|in your)|"
-    r"how do you (approach|think about|use)|walk us through|"
-    r"what (is|are) your (approach|strengths|design process)|"
-    # bare "Why <Company>?" and "what encouraged you to apply" - both seen on live postings
-    r"^\s*why\s+[a-z0-9][\w .&'-]{1,30}\?*\s*$|what (encouraged|drew|attracted) you",
+# Whether a free-text question can be answered from the resume's own facts.
+#
+# This started as a list of exact phrasings and kept missing new ones - every posting words
+# these differently ("Why Levelpath?", "What is it about Gamma that made you apply?", "Pitch me
+# one bold idea..."). Enumerating them does not converge, so draftability is decided by signal
+# instead: an open-ended prompt asking for explanation, opinion or an example.
+#
+# The guard below is what keeps that safe. Anything needing a FACT we do not hold is excluded
+# outright, whatever shape the question takes - inventing those puts a false statement on a real
+# application, which is far worse than leaving a question for a human.
+NON_DRAFTABLE_HINTS = re.compile(
+    r"salary|compensation|clearance|citizenship|visa|sponsor|immigration|notice period|"
+    r"reference|criminal|felony|fired|asked to resign|background check|citizen|"
+    r"certification number|license number|\bgpa\b|country of (your )?birth|"
+    r"date of birth|social security|essential functions|disabilit",
     re.I,
 )
 
-# Even within a draftable-looking prompt, these mean it needs facts we don't hold.
-NON_DRAFTABLE_HINTS = re.compile(
-    r"salary|compensation|clearance|citizenship|visa|sponsor|notice period|reference|"
-    r"criminal|felony|background check|certification number|license number",
+# Open-ended prompts: these ask you to explain, describe or give an example.
+OPEN_ENDED = re.compile(
+    r"^\s*(why|how|what|describe|tell|show|walk|pitch|share|explain|give)\b"
+    r"|^\s*please (add|list|provide|share|describe|tell|explain)\b"
+    r"|why (do|would|are) you"
+    r"|\b(example|examples|instance|bullets?)\b"
+    r"|tell (us|me) about"
+    r"|in your own words",
+    re.I,
+)
+
+# Yes/no and single-value questions are not essays even when they start with a question word.
+CLOSED_FORM = re.compile(
+    r"^\s*(are|is|do|does|did|have|has|can|will|would|may|should|were|was)\b"
+    r"|^\s*what (is|are) your [\w ]{0,28}?(name|email|phone|address|city|state|zip|pronouns"
+    r"|availability|location|timezone|time zone|start date|current employer|go.to)\b"
+    r"|^\s*(how many|how much|what year|what month|which)\b",
     re.I,
 )
 
@@ -77,12 +87,19 @@ RESUME (facts you may draw on):
 
 
 def is_draftable(label: str) -> bool:
-    # Form labels routinely use curly quotes ("What's a project you're most proud of?"), which
-    # silently defeat ASCII apostrophes in these patterns - normalize before matching.
-    text = normalize_text(label or "")
+    """True when this is an open-ended question we can answer from the resume.
+
+    Order matters: the fact-guard runs first, so "What was your undergraduate GPA?" and "What is
+    the country of your birth?" are excluded even though they are shaped like open questions.
+    """
+    text = normalize_text(label or "").strip()
+    if not text or len(text) < 12:
+        return False
     if NON_DRAFTABLE_HINTS.search(text):
         return False
-    return bool(DRAFTABLE_PATTERNS.search(text))
+    if CLOSED_FORM.search(text) and not OPEN_ENDED.search(text[text.find(" "):]):
+        return False
+    return bool(OPEN_ENDED.search(text))
 
 
 def draft_answer(label: str, job: dict[str, Any], job_id: int | None = None) -> str | None:

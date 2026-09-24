@@ -111,3 +111,29 @@ def test_options_are_captured_so_dropdowns_can_be_answered():
 ])
 def test_eeo_matching_requires_a_word_boundary(label, expected):
     assert classify_label(label)[0] == expected
+
+
+# ---- option-label detection ----
+
+@pytest.mark.parametrize("text", [
+    # Greenhouse records each checkbox choice as its own queue entry, so these arrived as
+    # "questions". Listing them by name doesn't generalise - every company has its own.
+    "Monkey MindPong", "Neuralink Show & Tell", "Instagram", "Word of mouth",
+    "Co-Star jobs page", "Women in Tech", "Projects", "Affirmation",
+])
+def test_option_labels_are_not_treated_as_questions(text):
+    from jobbot.apply.autolearn import looks_like_option_label
+    assert looks_like_option_label(text) is True
+
+
+@pytest.mark.parametrize("text", [
+    "What is the country of your birth?",
+    "Have you worked at a startup?",
+    "Do you require a visa?",
+    "Please list all countries of which you are a citizen",
+    "If you were referred to Livefront, tell us how.",
+    "Which onsite location would you like to apply to?",
+])
+def test_real_questions_are_kept(text):
+    from jobbot.apply.autolearn import looks_like_option_label
+    assert looks_like_option_label(text) is False
