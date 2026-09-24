@@ -370,6 +370,48 @@ def reject(app_id: int = typer.Argument(..., help="Application id to skip.")) ->
 
 
 @app.command()
+def requeue(
+    yes: bool = typer.Option(False, "--yes", help="Skip the confirmation prompt."),
+) -> None:
+    """Re-queue applications whose submission could never be verified.
+
+    These had submit clicked but produced no confirmation we could trust. Re-queuing risks a
+    duplicate application where one did land; leaving them risks losing the posting entirely.
+    Confirmed submissions are never touched.
+    """
+    with db.session() as conn:
+        rows = conn.execute(
+            """SELECT a.id, a.job_id, j.company, j.title FROM applications a
+               JOIN jobs j ON j.id = a.job_id
+               WHERE a.status = 'submitted_unconfirmed' ORDER BY j.company"""
+        ).fetchall()
+
+    if not rows:
+        console.print("Nothing to re-queue.")
+        return
+
+    console.print(f"[bold]{len(rows)}[/] unverifiable application(s) would be re-queued:")
+    for r in rows[:12]:
+        console.print(f"   [dim]{r['company']}[/] - {r['title'][:46]}")
+    if len(rows) > 12:
+        console.print(f"   [dim]... and {len(rows) - 12} more[/]")
+    console.print("\n[yellow]If any of these did submit, re-running creates a duplicate "
+                  "application.[/] Most ATSs de-duplicate by email address.")
+
+    if not yes and not typer.confirm("Re-queue them?", default=False):
+        console.print("[dim]Left as they were.[/]")
+        return
+
+    with db.session() as conn:
+        for r in rows:
+            db.update_application(conn, r["id"], status="queued", submitted_at=None,
+                                  last_error="re-queued: earlier attempt could not be verified")
+        conn.commit()
+    console.print(f"[green]Re-queued {len(rows)}[/]; the hourly run will work through them "
+                  "within the daily cap.")
+
+
+@app.command()
 def status() -> None:
     """Last run, today's counts, Claude CLI reachability."""
     from .claude_cli import check_cli
