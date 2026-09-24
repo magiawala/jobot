@@ -57,6 +57,31 @@ class FillResult:
     submitted: bool = False
 
 
+def is_submission_endpoint(url: str) -> bool:
+    """Whether a POST to this URL represents an actual application submission.
+
+    This has been wrong in both directions, so it is deliberately explicit:
+      - matching any "graphql" URL was far too broad. Ashby serves every page-load query over
+        GraphQL, so `op=ApiOrganizationFromHostedJobsPageName` fired on load and was reported
+        as a confirmed submission for an application that never went out.
+      - matching a contiguous "submitapplication" was too narrow, and missed Ashby's real op,
+        `ApiSubmitSingleApplicationFormAction` (verified against a submission that produced a
+        confirmation email).
+
+    Requiring "submit" and "application" anywhere in the URL covers the real operation names
+    while still excluding the page-load ops.
+    """
+    low = (url or "").lower().replace("_", "")
+    if "submit" in low and "application" in low:
+        return True
+    if any(op in low for op in ("createapplication", "createcandidate", "applicationsubmit")):
+        return True
+    if "graphql" in low:
+        return False   # any other graphql op is routine page traffic
+    return any(low.split("?")[0].rstrip("/").endswith(p)
+               for p in ("/applications", "/apply", "/application"))
+
+
 def polite_pause(lo: float = 3.0, hi: float = 10.0) -> None:
     """Randomized pause between actions that submit data, per the spec's polite-client rule."""
     time.sleep(random.uniform(lo, hi))
@@ -429,20 +454,17 @@ def apply_to_job(job: dict[str, Any], adapter_cls: type[BaseApplyAdapter], profi
         # broad: Ashby serves every page-load query over GraphQL, so a routine
         # `op=ApiOrganizationFromHostedJobsPageName` POST fired on load and was reported as a
         # confirmed submission for an application that never went out.
-        SUBMIT_OPS = ("submitapplication", "createapplication", "applicationsubmit",
-                      "submitjobapplication", "createcandidate", "submitform")
-
+        # Confirmed against a real Ashby submission: the op is
+        # `ApiSubmitSingleApplicationFormAction`, so a contiguous "submitapplication" match
+        # misses it. Requiring both words anywhere in the operation name is the rule that
+        # actually holds - and it still excludes the page-load op
+        # (`ApiOrganizationFromHostedJobsPageName`) that caused the earlier false positive.
         def _record(response) -> None:
             try:
                 if response.request.method != "POST":
                     return
                 url = response.url
-                low = url.lower()
-                is_submit = any(op in low.replace("_", "") for op in SUBMIT_OPS)
-                if not is_submit and "graphql" not in low:
-                    # non-graphql REST endpoints that are unambiguous
-                    is_submit = any(low.rstrip("/").endswith(p)
-                                    for p in ("/applications", "/apply", "/application"))
+                is_submit = is_submission_endpoint(url)
                 all_posts.append((response.status, url[:200], is_submit))
                 if is_submit:
                     submit_posts.append((response.status, url[:200]))
