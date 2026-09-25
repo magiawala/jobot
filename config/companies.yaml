@@ -19,6 +19,11 @@ companies:
   - { name: Workday,               ats: workday, board_token: workday,    shard: wd5,  site: Workday }
   - { name: Sony,                  ats: workday, board_token: sonyglobal, shard: wd1,  site: SonyGlobalCareers }
   - { name: Warner Bros Discovery, ats: workday, board_token: warnerbros, shard: wd5,  site: global }
+  # verified 2026-09-25 - tenant/shard/site confirmed against the live endpoint
+  - { name: Target,                ats: workday, board_token: target,     shard: wd5,   site: targetcareers }
+  - { name: Expedia,               ats: workday, board_token: expedia,    shard: wd108, site: search }
+  - { name: Chewy,                 ats: workday, board_token: chewy,      shard: wd5,   site: External }
+  - { name: Equinix,               ats: workday, board_token: equinix,    shard: wd1,   site: External }
 
   # ---------- Greenhouse ----------
   - { name: Stripe,        ats: greenhouse, board_token: stripe }
