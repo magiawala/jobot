@@ -12,6 +12,7 @@ from .ashby import AshbyFetcher
 from .base import BoardNotFound, Fetcher, Job, USER_AGENT, TIMEOUT
 from .greenhouse import GreenhouseFetcher
 from .lever import LeverFetcher
+from .workday import WorkdayFetcher
 
 logger = log.get("discover")
 
@@ -19,6 +20,7 @@ FETCHERS: dict[str, type[Fetcher]] = {
     "greenhouse": GreenhouseFetcher,
     "lever": LeverFetcher,
     "ashby": AshbyFetcher,
+    "workday": WorkdayFetcher,
 }
 
 # Cheap title pre-filter so we only store jobs that could possibly be one of the three target roles.
@@ -39,6 +41,11 @@ def fetch_company(company: dict[str, Any], client: httpx.Client) -> list[Job]:
     ats = (company.get("ats") or "").lower()
     if ats not in FETCHERS:
         raise ValueError(f"unsupported ats {ats!r} for {company.get('name')}")
+    if ats == "workday":
+        # Workday needs a shard (wd1/wd5/...) and site name; both vary per tenant.
+        return FETCHERS[ats](client).fetch(
+            company["name"], company["board_token"],
+            shard=company.get("shard", "wd1"), site=company.get("site"))
     return FETCHERS[ats](client).fetch(company["name"], company["board_token"])
 
 

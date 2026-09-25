@@ -69,6 +69,16 @@ thresholds: { skip_below: 50, tailor_at_or_above: 75 }
 # still go out, they just fall back to needs_human on essay questions instead of drafting.
 limits: { max_tailors_per_day: 10, max_apps_per_run: 8, max_apps_per_day: 20, max_claude_calls_per_day: 35 }
 weekly_application_target: 100
+
+# Long applications aren't worth the slot. Measured across 184 real applications: forms with
+# 11+ fields completed at 19% vs 36% for 1-6, and Devanshu's experience is that the long ones
+# don't produce callbacks regardless. Checked before filling, so an abandoned form never spends
+# Claude calls drafting its essays.
+form_limits:
+  enabled: true
+  max_fields: 14              # radio/checkbox groups count as one question, not one per option
+  max_essay_questions: 3      # free-text boxes needing a drafted answer
+  always_apply_ats: ["workday"]   # exempt whatever the length - these convert
 # AUTO enabled 2026-09-23 at Devanshu's request. Submits automatically when a form fills
 # completely with no unanswered required questions. Dream companies (Figma, Linear, Notion)
 # still wait for review - you get one shot at those. Switch back to REVIEW any time.

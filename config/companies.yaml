@@ -1,8 +1,25 @@
-# Company job boards. Each entry: name, ats (greenhouse | lever | ashby), board_token.
+# Company job boards. Each entry: name, ats (greenhouse | lever | ashby | workday), board_token.
+# Workday entries additionally need `shard` (wd1/wd5/wd12...) and `site` - both vary per tenant,
+# so each was verified against the live endpoint rather than guessed.
 # Optional: favorite: true (+10), dream: true (+15, always held for review), source: auto (added by the resolver).
 # All tokens below were verified live on 2026-09-21. Add your own; `jobbot find-board <careers url>` detects tokens.
 
 companies:
+  # Workday tenants. Added 2026-09-25: Devanshu's callbacks come from Workday applications, and
+  # these were not being searched at all (0 of 2865 jobs). DISCOVERY ONLY - Workday requires
+  # creating an account per tenant to apply, so these are queued for manual submission.
+  - { name: Adobe,                 ats: workday, board_token: adobe,      shard: wd5,  site: external_experienced }
+  - { name: Nvidia,                ats: workday, board_token: nvidia,     shard: wd5,  site: NVIDIAExternalCareerSite }
+  - { name: Salesforce,            ats: workday, board_token: salesforce, shard: wd12, site: External_Career_Site }
+  - { name: eBay,                  ats: workday, board_token: ebay,       shard: wd5,  site: apply }
+  - { name: PayPal,                ats: workday, board_token: paypal,     shard: wd1,  site: jobs }
+  - { name: Zillow,                ats: workday, board_token: zillow,     shard: wd5,  site: Zillow_Group_External }
+  - { name: HP,                    ats: workday, board_token: hp,         shard: wd5,  site: ExternalCareerSite }
+  - { name: Mastercard,            ats: workday, board_token: mastercard, shard: wd1,  site: CorporateCareers }
+  - { name: Workday,               ats: workday, board_token: workday,    shard: wd5,  site: Workday }
+  - { name: Sony,                  ats: workday, board_token: sonyglobal, shard: wd1,  site: SonyGlobalCareers }
+  - { name: Warner Bros Discovery, ats: workday, board_token: warnerbros, shard: wd5,  site: global }
+
   # ---------- Greenhouse ----------
   - { name: Stripe,        ats: greenhouse, board_token: stripe }
   - { name: Figma,         ats: greenhouse, board_token: figma, dream: true }

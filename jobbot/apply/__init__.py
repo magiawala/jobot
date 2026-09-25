@@ -49,11 +49,20 @@ def apply_one(job_id: int, mode: str | None = None, headed: bool = False,
             job.update({"tier": score_row["tier"], "score": score_row["total"],
                         "role_bucket": score_row["role_bucket"]})
 
+    resume_pdf = resume_for_job(job)
     adapter_cls = ADAPTERS.get(job["source_ats"])
     if adapter_cls is None:
+        if job["source_ats"] == "workday":
+            # Workday requires creating an account with a password on each company's tenant.
+            # JobBot does not create accounts, so these are surfaced for manual submission with
+            # the right resume already chosen rather than being retried forever.
+            return FillResult(
+                status="needs_human",
+                filled={"resume": str(resume_pdf)},
+                error="Workday needs an account per company - apply by hand; "
+                      f"use {resume_pdf.name}")
         return FillResult(status="needs_human", error=f"no adapter for ATS {job['source_ats']!r}")
 
-    resume_pdf = resume_for_job(job)
     if not resume_pdf.exists():
         return FillResult(status="failed", error=f"resume PDF missing: {resume_pdf}")
 
