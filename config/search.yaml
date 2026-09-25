@@ -29,7 +29,10 @@ title_blocklist: ["Intern", "Graphic Designer", "Instructional Designer", "Inter
                   "Apparel", "Softlines", "Hardlines", "Textile", "Sweaters", "Wovens", "Knits",
                   "Home Decor", "Home Decorative", "Lighting", "Footwear", "Accessories Designer",
                   "3D Designer", "CAD Designer", "Packaging Designer", "Print Designer",
-                  "Technical Designer", "Merchandise", "Trim Designer", "Colorist"]
+                  "Technical Designer", "Merchandise", "Trim Designer", "Colorist",
+                  # support roles that carry "Design" in the title
+                  "Executive Assistant", "Design Advocate", "Designer Advocate",
+                  "Recruiter", "Coordinator", "Design Program"]
 
 # Companies to skip entirely. Excluded 2026-09-23 at Devanshu's request: defense and
 # space/aerospace primes gate on US-person status, security-clearance eligibility and ITAR/EAR
