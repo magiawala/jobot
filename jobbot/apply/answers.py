@@ -332,6 +332,10 @@ def derive_answer(label: str, profile: dict[str, Any]) -> str | None:
         if prefs.get("willing_to_travel") is not None:
             return "Yes" if prefs.get("willing_to_travel") else "No"
 
+    # "In which country will you perform services for X?" / "Which country are you based in?"
+    if ("which country" in norm or "what country" in norm) and (loc.get("country") or ""):
+        return loc["country"]
+
     if "are you based in the us" in norm or "located in the united states" in norm \
             or "authorized to work in the united states" in norm:
         country = (loc.get("country") or "").lower()

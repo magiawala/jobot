@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import signal
 import time
 from contextlib import contextmanager
@@ -97,6 +98,15 @@ def selectable_jobs(conn, limit: int) -> list[dict[str, Any]]:
 UNREVIVABLE = ("captcha", "login", "account wall", "form too long", "posting closed",
                "needs an account per company", "did not render")
 
+# A recorded blocker that is a standard field name rather than a question: the adapter failed to
+# fill it, which a later fix may well have addressed. 23 applications were parked on "Resume"
+# alone, from before the Ashby fixes. No knowledge gap to close, so re-running is the right
+# response - bounded by MAX_REVIVE_ATTEMPTS so a genuinely broken form cannot loop forever.
+FILL_FAILURE_FIELDS = re.compile(
+    r"^(resume|resume/cv|cv|cover letter|projects?|portfolio|location|current location|"
+    r"phone|email|name|full name|linkedin|github|attachment)\b[\s*✱:]*$", re.I)
+MAX_REVIVE_ATTEMPTS = 4
+
 
 def revive_stale() -> int:
     """Re-queues needs_human applications whose recorded blockers are now answerable.
@@ -120,7 +130,7 @@ def revive_stale() -> int:
 
     with db.session() as conn:
         rows = conn.execute(
-            """SELECT a.id, a.filled_answers, a.last_error, j.company, j.title
+            """SELECT a.id, a.filled_answers, a.last_error, a.attempts, j.company, j.title
                FROM applications a JOIN jobs j ON j.id = a.job_id
                WHERE a.status = 'needs_human'"""
         ).fetchall()
@@ -142,12 +152,20 @@ def revive_stale() -> int:
                 continue
 
             def answerable(question: str) -> bool:
+                # Some "blockers" are a standard field we failed to fill, not a question we
+                # cannot answer - 23 applications were parked on "Resume" alone, from before
+                # the Ashby fixes. There's no knowledge gap to close there, so a re-run is
+                # exactly the right response. The attempts cap below stops that looping.
+                if FILL_FAILURE_FIELDS.match(question.strip()):
+                    return True
                 return bool(classify_label(question)[0]
                             or derive_answer(question, profile)
                             or is_draftable(question)
                             or find_answer(question))
 
             if not all(answerable(b) for b in blockers):
+                continue
+            if (row["attempts"] or 0) >= MAX_REVIVE_ATTEMPTS:
                 continue
 
             db.update_application(conn, row["id"], status="queued",

@@ -54,7 +54,8 @@ def test_revives_when_every_blocker_is_now_answerable(monkeypatch, stub_answerab
     stub_answerable({"Are you authorized to work in the US?"})
     updated = []
     _rows(monkeypatch, [{
-        "id": 1, "company": "Figma", "title": "Product Designer", "last_error": "unanswered required",
+        "id": 1, "company": "Figma", "title": "Product Designer", "attempts": 1,
+        "last_error": "unanswered required",
         "filled_answers": json.dumps({"unanswered": ["REQUIRED: Are you authorized to work in the US?"]}),
     }], updated)
     assert run.revive_stale() == 1
@@ -66,7 +67,8 @@ def test_does_not_revive_when_any_blocker_remains(monkeypatch, stub_answerable):
     stub_answerable({"Answerable one"})
     updated = []
     _rows(monkeypatch, [{
-        "id": 2, "company": "Acme", "title": "Designer", "last_error": "unanswered required",
+        "id": 2, "company": "Acme", "title": "Designer", "attempts": 1,
+        "last_error": "unanswered required",
         "filled_answers": json.dumps({"unanswered": [
             "REQUIRED: Answerable one", "REQUIRED: What is the country of your birth?"]}),
     }], updated)
@@ -85,7 +87,32 @@ def test_never_revives_blockers_a_person_must_clear(monkeypatch, stub_answerable
     stub_answerable({"anything"})
     updated = []
     _rows(monkeypatch, [{
-        "id": 3, "company": "Acme", "title": "Designer", "last_error": error,
+        "id": 3, "company": "Acme", "title": "Designer", "attempts": 1, "last_error": error,
         "filled_answers": json.dumps({"unanswered": ["REQUIRED: anything"]}),
+    }], updated)
+    assert run.revive_stale() == 0
+
+
+def test_revives_a_fill_failure_field_without_needing_an_answer(monkeypatch, stub_answerable):
+    """23 applications sat parked on "Resume" - a field the adapter failed to upload, not a
+    question. There is no answer to learn, so a re-run is the right response."""
+    stub_answerable(set())
+    updated = []
+    _rows(monkeypatch, [{
+        "id": 4, "company": "Clipboard", "title": "Design Engineer", "attempts": 1,
+        "last_error": "unanswered required",
+        "filled_answers": json.dumps({"unanswered": ["REQUIRED: Resume"]}),
+    }], updated)
+    assert run.revive_stale() == 1
+
+
+def test_stops_reviving_after_repeated_attempts(monkeypatch, stub_answerable):
+    """A form that genuinely cannot be filled must not loop forever."""
+    stub_answerable(set())
+    updated = []
+    _rows(monkeypatch, [{
+        "id": 5, "company": "Acme", "title": "Designer", "attempts": run.MAX_REVIVE_ATTEMPTS,
+        "last_error": "unanswered required",
+        "filled_answers": json.dumps({"unanswered": ["REQUIRED: Resume"]}),
     }], updated)
     assert run.revive_stale() == 0
