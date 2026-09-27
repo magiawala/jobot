@@ -71,12 +71,16 @@ locations:
 
 thresholds: { skip_below: 50, tailor_at_or_above: 75 }
 
-# Sized for the ~100 applications/week target (about 14-15/day).
-# The binding constraint is Claude calls, not job supply: each application with an open-ended
-# essay question costs 1-2 drafting calls, so ~15 applications/day lands around 20-30 calls.
+# Raised to 40/day 2026-09-27 to clear the revived backlog faster.
+#
+# Claude calls are no longer the constraint they looked like. Measured over four days, drafting
+# costs ~0.5-1 call per application rather than the 1-2 assumed: the 57 learned answers resolve
+# most questions without a call, and form_limits skips the multi-essay forms that were the
+# expensive ones. 09-25 ran ~20 applications on 11 calls. 60 leaves real headroom at 40/day.
+#
 # If you start hitting Pro usage limits, lower max_claude_calls_per_day first - applications
 # still go out, they just fall back to needs_human on essay questions instead of drafting.
-limits: { max_tailors_per_day: 10, max_apps_per_run: 8, max_apps_per_day: 20, max_claude_calls_per_day: 35 }
+limits: { max_tailors_per_day: 10, max_apps_per_run: 10, max_apps_per_day: 40, max_claude_calls_per_day: 60 }
 weekly_application_target: 100
 
 # Long applications aren't worth the slot. Measured across 184 real applications: forms with
