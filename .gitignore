@@ -28,3 +28,4 @@ build/
 # os
 .DS_Store
 config/learned_answers.yaml
+.jobbot_secrets

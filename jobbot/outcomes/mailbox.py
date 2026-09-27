@@ -14,6 +14,7 @@ import imaplib
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from datetime import datetime, timedelta
 from email.header import decode_header, make_header
 from typing import Iterator
@@ -74,18 +75,50 @@ def _plain_text(msg: email.message.Message) -> str:
     return re.sub(r"[ \t]+", " ", "\n".join(parts)).strip()[:20000]
 
 
+SECRETS_FILE = Path.home() / ".jobbot_secrets"
+
+
+def _password_from_file() -> str:
+    """Reads the app password from ~/.jobbot_secrets.
+
+    The environment variable alone is not enough for the scheduled run: launchd gives an agent
+    its own environment and never sources your shell profile, so an export in ~/.zshrc is
+    invisible to it and the hourly reply sync would fail silently forever.
+
+    The file lives outside the repo and must be chmod 600 - a readable-by-others secrets file is
+    refused rather than used.
+    """
+    if not SECRETS_FILE.exists():
+        return ""
+    mode = SECRETS_FILE.stat().st_mode & 0o077
+    if mode:
+        logger.warning("%s is readable by others (mode %o) - ignoring it. "
+                       "Run: chmod 600 %s", SECRETS_FILE, SECRETS_FILE.stat().st_mode & 0o777,
+                       SECRETS_FILE)
+        return ""
+    for line in SECRETS_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        if key.strip() == ENV_PASSWORD:
+            return value.strip().strip("'\"").replace(" ", "")
+    return ""
+
+
 def credentials() -> tuple[str, str, str]:
     """Returns (host, user, password). Raises if the password isn't configured."""
     profile = config.profile()
     user = (profile.get("email") or "").strip()
-    password = os.environ.get(ENV_PASSWORD, "").strip()
+    password = os.environ.get(ENV_PASSWORD, "").strip() or _password_from_file()
     host = (config.search().get("email") or {}).get("imap_host") or DEFAULT_HOST
     if not user:
         raise MailboxUnavailable("no email address in profile.yaml")
     if not password:
         raise MailboxUnavailable(
-            f"{ENV_PASSWORD} is not set. For Gmail, create an app password at "
-            "myaccount.google.com/apppasswords and export it - JobBot never stores it.")
+            f"No app password. Set {ENV_PASSWORD} in your shell, or put "
+            f"{ENV_PASSWORD}=... in {SECRETS_FILE} (chmod 600) so the scheduled run can read it "
+            "too. For Gmail this must be an app password from myaccount.google.com/apppasswords.")
     return host, user, password
 
 
