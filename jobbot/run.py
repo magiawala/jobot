@@ -93,6 +93,75 @@ def selectable_jobs(conn, limit: int) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+# Blockers that no amount of new answers will fix - a person has to act on these.
+UNREVIVABLE = ("captcha", "login", "account wall", "form too long", "posting closed",
+               "needs an account per company", "did not render")
+
+
+def revive_stale() -> int:
+    """Re-queues needs_human applications whose recorded blockers are now answerable.
+
+    Stale records do not self-heal: every time a class of question becomes answerable - work
+    authorization getting set, a question answered in learned_answers, drafting widened - the
+    applications already parked in needs_human stay parked. The highest-scoring job in the whole
+    database (Figma Product Designer, CMS at 105) sat blocked for days on a work-authorization
+    question that had been answerable the entire time.
+
+    Deliberately conservative: an application is only revived when EVERY recorded blocker now
+    resolves. A partial fix would just burn the slot and park it again. CAPTCHAs, login walls
+    and over-long forms are never revived, and nothing that was submitted is ever touched.
+    """
+    from .apply.answers import classify_label, derive_answer
+    from .apply.draft import is_draftable
+    from .apply.learned import find_answer
+
+    profile = config.profile()
+    revived = 0
+
+    with db.session() as conn:
+        rows = conn.execute(
+            """SELECT a.id, a.filled_answers, a.last_error, j.company, j.title
+               FROM applications a JOIN jobs j ON j.id = a.job_id
+               WHERE a.status = 'needs_human'"""
+        ).fetchall()
+
+        for row in rows:
+            error = (row["last_error"] or "").lower()
+            if any(marker in error for marker in UNREVIVABLE):
+                continue
+            if not row["filled_answers"]:
+                continue
+            try:
+                data = json.loads(row["filled_answers"])
+            except json.JSONDecodeError:
+                continue
+
+            blockers = [u.split(": ", 1)[-1].strip()
+                        for u in data.get("unanswered", []) if u.startswith("REQUIRED")]
+            if not blockers:
+                continue
+
+            def answerable(question: str) -> bool:
+                return bool(classify_label(question)[0]
+                            or derive_answer(question, profile)
+                            or is_draftable(question)
+                            or find_answer(question))
+
+            if not all(answerable(b) for b in blockers):
+                continue
+
+            db.update_application(conn, row["id"], status="queued",
+                                  last_error="auto-revived: previous blockers are now answerable")
+            revived += 1
+            logger.info("revived %s - %s (%d blocker(s) now answerable)",
+                        row["company"], row["title"][:44], len(blockers))
+        conn.commit()
+
+    if revived:
+        logger.info("revived %d stale application(s)", revived)
+    return revived
+
+
 def run_once(skip_discovery: bool = False, max_apps: int | None = None,
              dry_run: bool = False) -> dict[str, Any]:
     counts: dict[str, Any] = {"discovered_new": 0, "scored": 0, "attempted": 0, "filled": 0,
@@ -126,6 +195,13 @@ def run_once(skip_discovery: bool = False, max_apps: int | None = None,
     except Exception as e:  # noqa: BLE001
         errors.append(f"scoring: {type(e).__name__}: {e}")
         logger.exception("scoring stage failed")
+
+    # ---- revive ----
+    try:
+        counts["revived"] = revive_stale()
+    except Exception as e:  # noqa: BLE001
+        errors.append(f"revive: {type(e).__name__}: {e}")
+        logger.exception("revive stage failed")
 
     # ---- apply ----
     per_run = max_apps if max_apps is not None else limits["max_apps_per_run"]
