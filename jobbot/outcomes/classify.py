@@ -81,6 +81,49 @@ NOT_A_REPLY = re.compile(
 )
 
 
+# Senders whose mail is never a reply to a job application: marketing, social and transactional.
+# Without this, a LinkedIn Sales Navigator ad classified as an "offer" and an Amazon Locker
+# pickup notice as a "screen" - harmless while they matched no application, but a marketing mail
+# FROM a company you applied to would match it and record a false outcome. events@figma.com
+# announcing a conference result was classified "rejected", and Figma is a live application.
+MARKETING_SENDERS = re.compile(
+    r"@(em\.|e\.|marketing\.|news\.|email\.|mail\.)?"
+    r"(linkedin|amazon|amazonses|jetblue|united|delta|uber|lyft|doordash|instacart|spotify|"
+    r"netflix|apple|paypal|venmo|chase|amex|figma|notion|slack|zoom|dropbox|medium|substack)\."
+    r"|@.*\b(marketing|newsletter|promo|deals|noreply-social|notifications?)\b",
+    re.I,
+)
+
+# Mail genuinely about an application says so. Requiring this stops a company's marketing mail
+# from being read as a reply just because a stage phrase appears in it.
+APPLICATION_CONTEXT = re.compile(
+    r"\bapplication\b|\bapplied\b|\bcandidate\b|\brecruit(er|ing|ment)\b|\bhiring\b"
+    r"|\bposition\b|\brole\b|\bjob\b|\binterview\b|\bresume\b|\bcv\b",
+    re.I,
+)
+
+# ATS relays only carry application mail, so context is implied for them.
+ATS_SENDERS = re.compile(
+    r"@(.*\.)?(greenhouse-mail\.io|greenhouse\.io|ashbyhq\.com|hire\.lever\.co|lever\.co|"
+    r"myworkday\.com|workday\.com|smartrecruiters\.com|icims\.com|jobvite\.com)",
+    re.I,
+)
+
+
+def looks_like_application_mail(from_addr: str, subject: str, body: str) -> bool:
+    """Whether this message is plausibly about a job application at all.
+
+    Checked before any stage is assigned: a stage phrase inside a marketing email is not a
+    signal about an application, and if that mail came from a company we applied to it would be
+    matched and recorded as a real outcome.
+    """
+    if ATS_SENDERS.search(from_addr or ""):
+        return True
+    if MARKETING_SENDERS.search(from_addr or ""):
+        return False
+    return bool(APPLICATION_CONTEXT.search(f"{subject}\n{body[:2000]}"))
+
+
 @dataclass
 class Classification:
     stage: str
@@ -94,12 +137,19 @@ def _first_match(pattern: re.Pattern[str], text: str) -> str:
     return (m.group(0) or "").strip()[:120] if m else ""
 
 
-def classify(subject: str, body: str) -> Classification:
-    """Classifies one message. `body` should already be plain text."""
+def classify(subject: str, body: str, from_addr: str = "") -> Classification:
+    """Classifies one message. `body` should already be plain text.
+
+    `from_addr` is optional only so existing callers keep working; pass it whenever you have it,
+    because the sender is what distinguishes a recruiter's mail from a company's marketing.
+    """
     text = f"{subject}\n{body}"
 
     if NOT_A_REPLY.search(text):
         return Classification("unknown", "high", "job alert / newsletter, not a reply")
+
+    if from_addr and not looks_like_application_mail(from_addr, subject, body):
+        return Classification("unknown", "high", "not application mail (marketing/transactional)")
 
     # Order matters and is not the funnel order. A rejection that mentions "interview"
     # ("thank you for interviewing with us... unfortunately") is a rejection, so rejection is

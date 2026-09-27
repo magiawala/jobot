@@ -62,7 +62,7 @@ def sync_replies(days: int = 30, limit: int = 400) -> dict[str, Any]:
                 stats["skipped"] += 1
                 continue
 
-            result = classify(msg.subject, msg.body)
+            result = classify(msg.subject, msg.body, msg.from_addr)
             conn.execute(
                 "INSERT OR REPLACE INTO processed_emails (message_id, purpose, processed_at)"
                 " VALUES (?,?,?)", (msg.message_id, f"reply:{result.stage}", db.now_iso()))
