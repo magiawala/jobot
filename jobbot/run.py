@@ -214,6 +214,19 @@ def run_once(skip_discovery: bool = False, max_apps: int | None = None,
         errors.append(f"scoring: {type(e).__name__}: {e}")
         logger.exception("scoring stage failed")
 
+    # ---- replies ----
+    # Cheap and read-only, so it runs every hour: an outcome recorded promptly is what keeps the
+    # funnel metrics worth anything. Missing credentials is a warning, never a run failure.
+    try:
+        from .outcomes import sync_replies
+        res = sync_replies(days=14, limit=200)
+        counts["replies_recorded"] = res.get("recorded", 0)
+        if res.get("error"):
+            logger.info("reply sync skipped: %s", res["error"])
+    except Exception as e:  # noqa: BLE001
+        errors.append(f"replies: {type(e).__name__}: {e}")
+        logger.exception("reply stage failed")
+
     # ---- revive ----
     try:
         counts["revived"] = revive_stale()

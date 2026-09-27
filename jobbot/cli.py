@@ -439,6 +439,65 @@ def requeue(
 
 
 @app.command()
+def replies(
+    days: int = typer.Option(30, help="How far back to scan the inbox."),
+    limit: int = typer.Option(400, help="Maximum messages to read."),
+) -> None:
+    """Scan your inbox for recruiter replies and record the outcomes. Read-only."""
+    from .outcomes import sync_replies
+
+    res = sync_replies(days=days, limit=limit)
+    if res.get("error"):
+        console.print(f"[yellow]{res['error']}[/]")
+        raise typer.Exit(1)
+    console.print(
+        f"scanned [bold]{res['scanned']}[/] message(s) | "
+        f"matched [bold]{res['matched']}[/] | recorded [green]{res['recorded']}[/] outcome(s) | "
+        f"[dim]{res['skipped']} already seen[/]")
+    if res["unmatched_replies"]:
+        console.print(f"[yellow]{res['unmatched_replies']} reply-looking message(s) "
+                      "could not be matched to an application[/] [dim](see the log)[/]")
+
+
+@app.command()
+def metrics() -> None:
+    """Response rates by score band, source, role, resume and salary visibility."""
+    from .outcomes import funnel_metrics
+
+    m = funnel_metrics()
+    total = m["total_applications"]
+    if not total:
+        console.print("No submitted applications yet.")
+        return
+
+    overall = m["overall"].get("all", {})
+    console.print(f"\n[bold]{total}[/] submitted | "
+                  f"[bold]{overall.get('responses', 0)}[/] response(s) "
+                  f"({overall.get('response_rate', 0)}%) | "
+                  f"[green]{overall.get('positive', 0)} positive[/] "
+                  f"({overall.get('positive_rate', 0)}%)\n")
+
+    for section, label in (("score_band", "Score band"), ("source_ats", "Source"),
+                           ("role", "Role"), ("resume_kind", "Resume"),
+                           ("salary_listed", "Salary")):
+        rows = m.get(section) or {}
+        if not rows:
+            continue
+        t = Table(title=label, box=box.SIMPLE, title_justify="left")
+        t.add_column(label, style="bold"); t.add_column("apps", justify="right")
+        t.add_column("replies", justify="right"); t.add_column("rate", justify="right")
+        t.add_column("positive", justify="right"); t.add_column("", style="dim")
+        for key, d in rows.items():
+            t.add_row(str(key), str(d["applications"]), str(d["responses"]),
+                      f"{d['response_rate']}%", str(d["positive"]),
+                      "" if d["significant"] else f"too few (<{m['min_group']})")
+        console.print(t)
+
+    console.print(f"[dim]Groups under {m['min_group']} applications are shown but not "
+                  "trustworthy - a difference that size is noise.[/]")
+
+
+@app.command()
 def status() -> None:
     """Last run, today's counts, Claude CLI reachability."""
     from .claude_cli import check_cli
