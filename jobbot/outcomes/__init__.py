@@ -79,6 +79,21 @@ def sync_replies(days: int = 30, limit: int = 400) -> dict[str, Any]:
                 continue
             stats["matched"] += 1
 
+            # A reply from the company is proof the application actually landed - better
+            # evidence than watching for a submission POST, which this project got wrong three
+            # separate ways. Any matched reply, including a plain auto-acknowledgement,
+            # upgrades submitted_unconfirmed to submitted.
+            app_row = conn.execute("SELECT status FROM applications WHERE id=?",
+                                   (hit.application_id,)).fetchone()
+            if app_row and app_row["status"] == "submitted_unconfirmed":
+                conn.execute(
+                    """UPDATE applications SET status='submitted', submitted_at=COALESCE(submitted_at, ?),
+                       last_error='confirmed by reply from the company', updated_at=?
+                       WHERE id=?""",
+                    (msg.received_at or db.now_iso(), db.now_iso(), hit.application_id))
+                stats["confirmed_by_reply"] = stats.get("confirmed_by_reply", 0) + 1
+                logger.info("confirmed %s submitted - company replied", hit.company)
+
             existing = conn.execute(
                 "SELECT stage FROM outcomes WHERE application_id=? ORDER BY id DESC LIMIT 1",
                 (hit.application_id,)).fetchone()
