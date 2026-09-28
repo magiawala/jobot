@@ -464,7 +464,33 @@ class BaseApplyAdapter:
         if not isinstance(result, list):
             logger.error("pre-submit validation returned %r (blocking submit)", type(result))
             return [PRESUBMIT_CHECK_FAILED]
-        return [str(x) for x in result]
+
+        # The browser's own verdict, which outranks any heuristic of ours. Greenhouse's
+        # react-select widgets keep a hidden required input with no name, id or label - utterly
+        # invisible to a label-based scan - so a form could look complete to us while
+        # checkValidity() was false and the submit click silently did nothing.
+        return [str(x) for x in result] + self.native_invalid_fields()
+
+    def native_invalid_fields(self) -> list[str]:
+        """Fields the browser itself considers invalid, described as best we can."""
+        try:
+            return self.page.evaluate("""() => {
+              const form = document.querySelector('form');
+              if (!form || form.checkValidity()) return [];
+              const out = [];
+              form.querySelectorAll('input:invalid, select:invalid, textarea:invalid').forEach(el => {
+                const wrap = el.closest('div, fieldset, li');
+                const label = wrap
+                  ? (wrap.innerText || '').split('\\n').map(s => s.trim()).filter(Boolean)[0] || ''
+                  : '';
+                const name = el.name || el.id || label || '(unlabelled field)';
+                out.push(`${name}`.slice(0, 90) + (el.validationMessage ? ` - ${el.validationMessage}` : ''));
+              });
+              return Array.from(new Set(out)).slice(0, 12);
+            }""")
+        except Exception as e:  # noqa: BLE001
+            logger.warning("native validity check failed: %s", e)
+            return []
 
     def confirm_submitted(self, timeout_s: int = 45) -> bool:
         """Polls for a submission confirmation instead of checking once.

@@ -11,7 +11,7 @@ from __future__ import annotations
 from playwright.sync_api import TimeoutError as PWTimeout
 
 from .. import log
-from .answers import is_required, pick_option
+from .answers import classify_label, is_required, pick_option
 from .base import BaseApplyAdapter
 
 logger = log.get("apply.greenhouse")
@@ -29,10 +29,115 @@ class GreenhouseAdapter(BaseApplyAdapter):
         self.upload_resume("#resume")
         self._fill_custom_questions()
         self._fill_eeo()
+        self._complete_unselected_comboboxes()
+
+    def _complete_unselected_comboboxes(self) -> None:
+        """Finishes any react-select whose hidden required input is still empty.
+
+        This is what silently blocked every Greenhouse submission. Greenhouse renders a combobox
+        as a visible text input plus a HIDDEN required input carrying the chosen value - no name,
+        no id, no label. Typing into the visible box leaves the hidden one empty, so
+        form.checkValidity() is false and clicking submit does nothing at all: no request, no
+        error, no visible validation message. The click appeared to work and never did.
+
+        Each one is completed with a REAL answer typed in and matched. An earlier version just
+        pressed ArrowDown+Enter to take whatever was first, which selected Afghanistan (+93) as
+        the phone country on a Figma application - a form that validates with a false answer in
+        it is worse than one that doesn't submit.
+        """
+        loc = (self.profile.get("location") or {})
+        # what we know how to answer, by the field's own id
+        known: dict[str, str] = {
+            "country": loc.get("country") or "United States",
+            "candidate-location": ", ".join(
+                x for x in (loc.get("city"), loc.get("state")) if x) or "",
+        }
+
+        for _ in range(6):      # each fix can reveal another; bounded so this can't spin
+            target = self.page.evaluate("""() => {
+              const form = document.querySelector('form');
+              if (!form || form.checkValidity()) return null;
+              const bad = form.querySelector('input:invalid');
+              if (!bad) return null;
+              const wrap = bad.closest('div');
+              if (!wrap) return null;
+              const combo = wrap.querySelector('[role=combobox], input[type=text]:not(:invalid)');
+              if (!combo) return null;
+              combo.setAttribute('data-jobbot-target', '1');
+              return {
+                id: combo.id || '',
+                label: ((wrap.innerText || '').split('\\n').map(s => s.trim())
+                        .filter(Boolean)[0] || '').slice(0, 80),
+              };
+            }""")
+            if not target:
+                return
+
+            label = target.get("label") or target.get("id") or "combobox"
+            answer = known.get(target.get("id") or "") or ""
+            if not answer:
+                key, _eeo, _score = classify_label(label)
+                answer = (self.answers.get(key) or "") if key else ""
+
+            if not answer:
+                # No idea what the right answer is. Leaving it empty keeps the form invalid, so
+                # the pre-submit gate blocks and a human decides - which is the correct outcome.
+                self._clear_target()
+                self.record_unanswered(label, True, kind="combobox")
+                logger.info("combobox %r has no known answer - leaving for review", label[:60])
+                return
+
+            if not self._select_combobox_option(answer, label):
+                self._clear_target()
+                self.record_unanswered(label, True, kind="combobox")
+                return
+
+    def _clear_target(self) -> None:
+        try:
+            self.page.evaluate("""() => document.querySelectorAll('[data-jobbot-target]')
+                   .forEach(e => e.removeAttribute('data-jobbot-target'))""")
+        except Exception:  # noqa: BLE001
+            pass
+
+    def _select_combobox_option(self, answer: str, label: str) -> bool:
+        """Types the answer and picks the best-matching option, never merely the first."""
+        try:
+            box = self.page.locator('[data-jobbot-target="1"]').first
+            box.scroll_into_view_if_needed(timeout=5000)
+            box.click()
+            box.fill("")
+            box.type(answer, delay=60)
+            self.page.wait_for_timeout(900)
+
+            opts = self.page.locator('[role="option"]')
+            texts = [opts.nth(i).inner_text().strip() for i in range(min(opts.count(), 40))]
+            choice = pick_option(texts, answer) if texts else None
+            if choice is not None:
+                opts.nth(texts.index(choice)).click()
+            else:
+                # no option list (a plain autocomplete): commit with the keyboard
+                self.page.keyboard.press("ArrowDown")
+                self.page.wait_for_timeout(150)
+                self.page.keyboard.press("Enter")
+            self.page.wait_for_timeout(400)
+            self.filled[f"{label[:44]}"] = choice or answer
+            self.drop_unanswered(label)
+            logger.info("combobox %r -> %r", label[:46], (choice or answer)[:40])
+            return True
+        except Exception as e:  # noqa: BLE001
+            logger.debug("combobox %r failed: %s", label[:40], e)
+            return False
+        finally:
+            self._clear_target()
 
     def _fill_combobox(self, selector: str, value: str, key: str) -> bool:
         """Greenhouse location/country inputs are autocompletes: typing alone leaves the field
-        unvalidated, so we pick the first suggestion."""
+        unvalidated, so a suggestion has to be chosen.
+
+        It picks the BEST-matching suggestion, not the first: typing "Boston, MA" offers "East
+        Boston, Massachusetts" first, and taking it put the wrong neighbourhood on a live Figma
+        application. First-option-wins has now been the wrong default three times in this file.
+        """
         if not value:
             return False
         try:
@@ -41,11 +146,20 @@ class GreenhouseAdapter(BaseApplyAdapter):
                 return False
             loc.click()
             loc.fill(value)
-            self.page.wait_for_timeout(1200)
-            option = self.page.locator('[role="option"], .select__option, li[id*="option"]').first
-            if option.count() > 0 and option.is_visible():
-                option.click()
-            self.filled[key] = value
+            self.page.wait_for_timeout(1400)
+
+            opts = self.page.locator('[role="option"], .select__option, li[id*="option"]')
+            texts = [opts.nth(i).inner_text().strip() for i in range(min(opts.count(), 25))]
+            if texts:
+                choice = pick_option(texts, value)
+                if choice is None:
+                    # prefer a suggestion that starts with what we typed over an arbitrary one
+                    starts = [t for t in texts if t.lower().startswith(value.split(",")[0].lower())]
+                    choice = starts[0] if starts else texts[0]
+                opts.nth(texts.index(choice)).click()
+                self.filled[key] = choice
+            else:
+                self.filled[key] = value
             return True
         except Exception as e:  # noqa: BLE001
             logger.debug("combobox %s failed: %s", selector, e)
