@@ -179,10 +179,34 @@ class BaseApplyAdapter:
         except Exception:  # noqa: BLE001
             return False
 
+    def check_enterprise_captcha(self) -> None:
+        """reCAPTCHA Enterprise means this form cannot be submitted programmatically.
+
+        Unlike the passive v3 badge, Enterprise gates the submission itself, and it does so in
+        two different ways depending on the board:
+          - boards.greenhouse.io   -> the POST reaches the server and comes back 428
+          - job-boards.greenhouse.io -> the client never sends the request at all
+
+        In both cases the form fills perfectly, checkValidity() is true and the submit button is
+        enabled, so nothing looks wrong. Zero Greenhouse applications had ever actually submitted
+        because of this. We do not solve or work around bot checks, so this is raised BEFORE
+        filling - there is no point spending Claude calls drafting essays for a form that cannot
+        be submitted.
+        """
+        try:
+            present = self.page.evaluate("""() => Array.from(document.querySelectorAll('iframe'))
+                .some(f => /recaptcha\\/enterprise\\/anchor/i.test(f.src || ''))""")
+        except Exception:  # noqa: BLE001
+            return
+        if present:
+            raise NeedsHuman(
+                "reCAPTCHA Enterprise gates this form - it must be submitted by hand")
+
     def run_safety_checks(self) -> None:
         self.check_posting_open()
         self.check_login_wall()
         self.check_captcha()
+        self.check_enterprise_captcha()
 
     # ---------- filling helpers ----------
 
@@ -658,6 +682,22 @@ def apply_to_job(job: dict[str, Any], adapter_cls: type[BaseApplyAdapter], profi
             # Log what the click actually caused. When a submit silently does nothing, this is
             # the difference between guessing and knowing.
             after_click = all_posts[posts_before:]
+
+            # 428 Precondition Required is how Greenhouse refuses a submission that lacks a valid
+            # reCAPTCHA Enterprise token. The form is complete and the request does reach the
+            # server - it is rejected for the CAPTCHA specifically. We do not solve or work
+            # around CAPTCHAs, so this is a genuine hand-off rather than a bug to fix.
+            captcha_refusals = [u for status, u, _ in after_click if status in (428, 403)]
+            if captcha_refusals and not any(
+                    200 <= s < 300 for s, _u, is_sub in after_click if is_sub):
+                logger.warning("job %s: server refused the submission (%s) - looks like a CAPTCHA "
+                               "precondition; needs manual submission",
+                               job.get("id"), captcha_refusals[0][:90])
+                return FillResult(
+                    status="needs_human", filled=adapter.filled,
+                    unanswered=adapter.unanswered, screenshot_path=str(shot_after),
+                    error="server rejected the submission (CAPTCHA precondition) - "
+                          "this form must be submitted by hand")
             if after_click:
                 logger.info("POSTs after submit click (%d):", len(after_click))
                 for status, url, is_submit in after_click[:12]:
