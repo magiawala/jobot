@@ -5,6 +5,16 @@
 # All tokens below were verified live on 2026-09-21. Add your own; `jobbot find-board <careers url>` detects tokens.
 
 companies:
+
+  # Ashby boards verified 2026-09-28 as having live design roles. Ashby is the only
+  # ATS where submissions actually land (48 confirmed), so coverage here is what
+  # throughput depends on - Greenhouse is gated behind reCAPTCHA Enterprise.
+  - { name: Parloa,                    ats: ashby, board_token: parloa           }   # 4 design role(s)
+  - { name: Midjourney,                ats: ashby, board_token: midjourney       }   # 3 design role(s)
+  - { name: Poshmark,                  ats: ashby, board_token: poshmark         }   # 2 design role(s)
+  - { name: Socure,                    ats: ashby, board_token: socure           }   # 1 design role(s)
+  - { name: Persona,                   ats: ashby, board_token: persona          }   # 1 design role(s)
+  - { name: Amplitude,                 ats: ashby, board_token: amplitude        }   # 1 design role(s)
   # Workday tenants. Added 2026-09-25: Devanshu's callbacks come from Workday applications, and
   # these were not being searched at all (0 of 2865 jobs). DISCOVERY ONLY - Workday requires
   # creating an account per tenant to apply, so these are queued for manual submission.

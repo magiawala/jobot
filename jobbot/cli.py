@@ -439,6 +439,56 @@ def requeue(
 
 
 @app.command()
+def handoff(
+    limit: int = typer.Option(8, help="How many forms to prepare in one batch."),
+    ats: Optional[str] = typer.Option("greenhouse", help="Which ATS (greenhouse | ashby | lever), or 'all'."),
+) -> None:
+    """Fill forms JobBot can't submit and hand them over at the last click.
+
+    Opens a visible browser with one tab per job, every field and drafted answer already in
+    place. You enter the verification code and click Submit; nothing is submitted for you.
+    """
+    from .apply.handoff import candidates, prepare_batch
+
+    jobs = candidates(limit, None if ats in (None, "all") else ats)
+    if not jobs:
+        console.print("Nothing to hand off.")
+        return
+
+    console.print(f"Preparing [bold]{len(jobs)}[/] form(s) - a browser window will open:\n")
+    for j in jobs:
+        console.print(f"   [dim]{j['age_days']}d[/] [bold]{j['total']}[/] {j['company'][:22]:24} {j['title'][:40]}")
+
+    prepared = prepare_batch(jobs)
+
+    console.print("\n[bold]Prepared:[/]")
+    ok = []
+    for p in prepared:
+        if p.error:
+            console.print(f"  [red]skipped[/] {p.company[:20]:22} {p.error[:56]}")
+        elif p.blockers:
+            console.print(f"  [yellow]{p.filled} filled[/] {p.company[:20]:22} "
+                          f"[dim]still empty: {'; '.join(p.blockers[:2])[:48]}[/]")
+            ok.append(p)
+        else:
+            console.print(f"  [green]{p.filled} filled[/] {p.company[:20]:22} {p.title[:34]} [dim]ready[/]")
+            ok.append(p)
+
+    if ok:
+        ids = " ".join(str(p.job_id) for p in ok)
+        console.print(f"\n[dim]Once you've submitted them, record it with:[/]\n  jobbot submitted {ids}")
+
+
+@app.command()
+def submitted(job_ids: list[int] = typer.Argument(..., help="Job ids you submitted by hand.")) -> None:
+    """Record applications you submitted yourself, so they're counted and not offered again."""
+    from .apply.handoff import mark_submitted
+
+    n = mark_submitted(job_ids)
+    console.print(f"[green]Recorded {n}[/] manual submission(s).")
+
+
+@app.command()
 def replies(
     days: int = typer.Option(30, help="How far back to scan the inbox."),
     limit: int = typer.Option(400, help="Maximum messages to read."),
