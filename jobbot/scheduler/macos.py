@@ -79,8 +79,14 @@ def _build_plist(label: str, args: list[str], *, interval: int | None = None,
         },
         "StandardOutPath": str(log_dir / f"{label}.out.log"),
         "StandardErrorPath": str(log_dir / f"{label}.err.log"),
-        "RunAtLoad": False,
-        "ProcessType": "Background",
+        # Run once as soon as the agent loads, so a reboot or a reinstall doesn't wait an hour.
+        "RunAtLoad": True,
+        # NOT ProcessType Background. That tells macOS the job is throttleable, and it duly
+        # throttled it: `launchctl print` showed "pended nondemand spawn = interval" with 25
+        # hours since the last run while the machine was in use. Standard priority means the
+        # interval is honoured.
+        "LowPriorityIO": True,
+        "Nice": 5,
     }
     if interval is not None:
         plist["StartInterval"] = interval
