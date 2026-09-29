@@ -26,7 +26,7 @@ class AshbyAdapter(BaseApplyAdapter):
         self.fill_if_present("#_systemfield_name", full_name, "full_name")
         self.fill_if_present("#_systemfield_email", self.answers.get("email") or "", "email")
         self.upload_resume("#_systemfield_resume")
-        self._fill_location()
+        self._fill_comboboxes()
         self._fill_labeled_fields()
         self._fill_yesno_buttons()
         self._fill_choice_fieldsets()
@@ -129,6 +129,85 @@ class AshbyAdapter(BaseApplyAdapter):
         except Exception as e:  # noqa: BLE001
             logger.debug("select %s failed: %s", label[:40], e)
             self.record_unanswered(label, is_required(label))
+
+    def _fill_comboboxes(self) -> None:
+        """Fills EVERY combobox on the form, not just the location one.
+
+        Ashby comboboxes are `input[role=combobox]` with no id and no name, so they can only be
+        told apart by their question label. An earlier version took `.first` and filled location
+        only, which meant a second combobox - "In which country will you perform services?",
+        "Where are you currently located?" - was silently left empty and the form failed
+        validation at submit time with a question we could actually answer.
+        """
+        entries = self.page.evaluate("""() => {
+          const out = [];
+          document.querySelectorAll('.ashby-application-form-field-entry').forEach((e, i) => {
+            const box = e.querySelector('input[role="combobox"]');
+            if (!box) return;
+            const lab = e.querySelector('label');
+            const q = (lab ? lab.innerText : (e.innerText || '').split('\\n')[0] || '').trim();
+            out.push({index: i, question: q.slice(0, 140), filled: !!(box.value || '').trim()});
+          });
+          return out;
+        }""")
+
+        for entry in entries:
+            if entry["filled"]:
+                continue
+            question = entry["question"]
+            answer, _eeo = self.answer_for_label(question)
+            if not answer:
+                # location is the unlabelled default on most Ashby forms
+                if not question or "location" in question.lower():
+                    answer = self.answers.get("location") or ""
+            if not answer:
+                if is_required(question, True):
+                    self.record_unanswered(question or "combobox", True, kind="combobox")
+                continue
+            self._select_in_combobox(entry["index"], answer, question)
+
+    def _select_in_combobox(self, entry_index: int, answer: str, question: str) -> None:
+        """Types into the combobox at this field-entry index and commits with the keyboard."""
+        try:
+            box = self.page.locator(
+                ".ashby-application-form-field-entry input[role='combobox']"
+            ).nth(self._combobox_ordinal(entry_index))
+            box.scroll_into_view_if_needed(timeout=5000)
+            box.click()
+            box.fill("")
+            box.type(answer.split(",")[0], delay=110)
+            self.page.wait_for_timeout(1800)
+            self.page.keyboard.press("ArrowDown")
+            self.page.wait_for_timeout(200)
+            self.page.keyboard.press("Enter")
+            self.page.wait_for_timeout(400)
+
+            resolved = (box.input_value() or "").strip()
+            if resolved:
+                self.filled[(question or "location")[:46]] = resolved
+                self.drop_unanswered(question)
+                logger.info("combobox %r -> %r", (question or "location")[:44], resolved[:40])
+            else:
+                self.record_unanswered(question or "combobox", True, kind="combobox")
+        except Exception as e:  # noqa: BLE001
+            logger.debug("combobox %r failed: %s", question[:40], e)
+            self.record_unanswered(question or "combobox", True, kind="combobox")
+
+    def _combobox_ordinal(self, entry_index: int) -> int:
+        """Maps a field-entry index onto the nth combobox on the page."""
+        try:
+            return self.page.evaluate("""(idx) => {
+              const entries = Array.from(document.querySelectorAll('.ashby-application-form-field-entry'));
+              let n = 0;
+              for (let i = 0; i < entries.length; i++) {
+                const has = !!entries[i].querySelector('input[role="combobox"]');
+                if (i === idx) return n;
+                if (has) n += 1;
+              }
+              return 0;
+            }""", entry_index)
+        except Exception:  # noqa: BLE001
+            return 0
 
     def _fill_location(self) -> None:
         """Ashby's Location is an input[role=combobox] with no id or name, backed by a remote
