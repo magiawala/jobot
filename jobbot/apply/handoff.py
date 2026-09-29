@@ -35,7 +35,12 @@ class Prepared:
 
 
 def candidates(limit: int, ats: str | None = None) -> list[dict[str, Any]]:
-    """Jobs worth a hand-off: blocked only by something a human must clear, freshest first."""
+    """Jobs worth a hand-off: the ones the bot cannot submit itself, freshest first.
+
+    Defaults to EXCLUDING the automatable ATSs. Handing over an Ashby job would waste the
+    scarcer resource - Devanshu's attention - on something the hourly run submits unattended.
+    """
+    exclude = [] if ats else (config.search().get("automatable_ats") or ["ashby", "lever"])
     with db.session() as conn:
         rows = conn.execute(
             """SELECT j.id, j.company, j.title, j.apply_url, j.source_ats, s.total,
@@ -45,6 +50,7 @@ def candidates(limit: int, ats: str | None = None) -> list[dict[str, Any]]:
                LEFT JOIN applications a ON a.job_id = j.id
                WHERE j.active = 1 AND j.duplicate_of_job_id IS NULL AND s.tier != 'skip'
                  AND (? IS NULL OR j.source_ats = ?)
+                 AND (j.source_ats NOT IN (SELECT value FROM json_each(?)))
                  AND (a.id IS NULL OR a.status IN ('queued', 'needs_human'))
                  AND COALESCE(a.status, '') != 'submitted'
                ORDER BY
@@ -52,7 +58,7 @@ def candidates(limit: int, ats: str | None = None) -> list[dict[str, Any]]:
                       WHEN julianday('now') - julianday(j.posted_at) <= 7 THEN 1 ELSE 2 END,
                  s.total DESC
                LIMIT ?""",
-            (ats, ats, limit),
+            (ats, ats, __import__("json").dumps(exclude), limit),
         ).fetchall()
     return [dict(r) for r in rows]
 
