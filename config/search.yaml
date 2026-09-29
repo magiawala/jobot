@@ -86,6 +86,13 @@ thresholds: { skip_below: 50, tailor_at_or_above: 75 }
 limits: { max_tailors_per_day: 10, max_apps_per_run: 10, max_apps_per_day: 40, max_claude_calls_per_day: 60 }
 weekly_application_target: 100
 
+# ATSs whose forms JobBot can actually submit. Measured, not assumed: Ashby accounts for every
+# confirmed submission, while Greenhouse boards using reCAPTCHA Enterprise cannot be submitted
+# at all and Workday needs an account per company. Jobs on the others stay in the pool and are
+# worked by `jobbot handoff`; they just don't consume the automated run's limited slots, which
+# was costing half of every batch.
+automatable_ats: ["ashby", "lever"]
+
 # Long applications aren't worth the slot. Measured across 184 real applications: forms with
 # 11+ fields completed at 19% vs 36% for 1-6, and Devanshu's experience is that the long ones
 # don't produce callbacks regardless. Checked before filling, so an abandoned form never spends

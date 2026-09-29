@@ -67,9 +67,21 @@ def selectable_jobs(conn, limit: int) -> list[dict[str, Any]]:
     Within a bucket, the best match wins.
     """
     thresholds = config.search()["thresholds"]
+    # ATSs we can actually submit to come first. Half of every batch was being spent opening
+    # Greenhouse forms only to discover reCAPTCHA Enterprise and discard them, and Workday
+    # cannot be submitted at all without an account - each one consumed a slot for nothing.
+    # They stay in the pool (jobbot handoff works them deliberately), just last in line.
+    auto_first = config.search().get("automatable_ats") or ["ashby", "lever"]
     rows = conn.execute(
-        """SELECT j.id, j.company, j.title, j.apply_url, j.source_ats, j.posted_at,
+        f"""SELECT j.id, j.company, j.title, j.apply_url, j.source_ats, j.posted_at,
                   s.total, s.tier,
+                  CASE WHEN j.source_ats IN ({','.join('?' * len(auto_first))}) THEN 0 ELSE 1 END
+                    AS manual_rank,
+                  -- a company that has already shown us an Enterprise CAPTCHA will do it again
+                  CASE WHEN EXISTS (
+                     SELECT 1 FROM applications ax JOIN jobs jx ON jx.id = ax.job_id
+                     WHERE jx.company = j.company AND ax.last_error LIKE '%reCAPTCHA Enterprise%'
+                  ) THEN 1 ELSE 0 END AS known_blocked,
                   CAST(julianday('now') - julianday(j.posted_at) AS INTEGER) AS age_days
            FROM jobs j
            JOIN scores s ON s.job_id = j.id
@@ -80,7 +92,9 @@ def selectable_jobs(conn, limit: int) -> list[dict[str, Any]]:
              AND s.total >= ?
              AND (a.id IS NULL OR a.status = 'queued')
            ORDER BY
-             CASE
+             known_blocked,      -- a company that already showed us Enterprise will do it again
+             manual_rank,        -- then: can we actually submit to this ATS?
+             CASE                -- then freshness, because being early still matters most
                WHEN j.posted_at IS NULL THEN 4
                WHEN julianday('now') - julianday(j.posted_at) <= 3  THEN 0
                WHEN julianday('now') - julianday(j.posted_at) <= 7  THEN 1
@@ -89,7 +103,7 @@ def selectable_jobs(conn, limit: int) -> list[dict[str, Any]]:
              END,
              s.total DESC
            LIMIT ?""",
-        (thresholds["skip_below"], limit),
+        (*auto_first, thresholds["skip_below"], limit),
     ).fetchall()
     return [dict(r) for r in rows]
 
