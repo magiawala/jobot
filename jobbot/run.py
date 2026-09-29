@@ -214,6 +214,18 @@ def run_once(skip_discovery: bool = False, max_apps: int | None = None,
         errors.append(f"scoring: {type(e).__name__}: {e}")
         logger.exception("scoring stage failed")
 
+    # ---- tailor ----
+    # Runs before apply so a tailored PDF exists by the time resume_for_job() looks for one.
+    # Rationed by tailoring_priority() and the daily budget, since each one costs a Claude call.
+    if not dry_run:
+        try:
+            from .resume.tailor import tailor_due_jobs
+            res = tailor_due_jobs()
+            counts["tailored"] = res.get("tailored", 0)
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"tailor: {type(e).__name__}: {e}")
+            logger.exception("tailoring stage failed")
+
     # ---- replies ----
     # Cheap and read-only, so it runs every hour: an outcome recorded promptly is what keeps the
     # funnel metrics worth anything. Missing credentials is a warning, never a run failure.

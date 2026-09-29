@@ -439,6 +439,41 @@ def requeue(
 
 
 @app.command()
+def tailor(
+    job_id: Optional[int] = typer.Option(None, help="Tailor one specific job."),
+    limit: Optional[int] = typer.Option(None, help="How many to tailor (default: the daily budget)."),
+) -> None:
+    """Write per-job tailored resumes for the highest-priority untailored jobs.
+
+    Bullets are selected from Devanshu's real bullet library and validated against the same fact
+    boundary as the role variants - nothing is invented. A resume that fails validation falls
+    back to the role variant rather than being used.
+    """
+    from .resume.tailor import tailor_due_jobs, tailor_for_job
+
+    if job_id is not None:
+        with db.session() as conn:
+            row = conn.execute(
+                """SELECT j.id, j.company, j.title, j.description_text, s.role_bucket
+                   FROM jobs j LEFT JOIN scores s ON s.job_id=j.id WHERE j.id=?""", (job_id,)).fetchone()
+        if not row:
+            console.print("[yellow]No such job.[/]")
+            raise typer.Exit(1)
+        path = tailor_for_job(dict(row), row["role_bucket"])
+        if path:
+            console.print(f"[green]tailored[/] {row['company']} - {row['title'][:44]}\n  {path}")
+        else:
+            console.print("[yellow]Fell back to the role variant[/] (validation failed or Claude unavailable).")
+        return
+
+    res = tailor_due_jobs(limit=limit)
+    if res.get("reason"):
+        console.print(f"[dim]{res['reason']}[/]")
+    console.print(f"[green]{res.get('tailored', 0)}[/] resume(s) tailored "
+                  f"[dim](considered {res.get('considered', 0)}, budget {res.get('budget', 0)})[/]")
+
+
+@app.command()
 def handoff(
     limit: int = typer.Option(8, help="How many forms to prepare in one batch."),
     ats: Optional[str] = typer.Option("greenhouse", help="Which ATS (greenhouse | ashby | lever), or 'all'."),
