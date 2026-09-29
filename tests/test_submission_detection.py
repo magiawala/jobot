@@ -38,3 +38,22 @@ def test_real_submission_endpoints_are_recognised(url):
 @pytest.mark.parametrize("url", NOT_SUBMISSIONS)
 def test_routine_traffic_is_not_mistaken_for_a_submission(url):
     assert is_submission_endpoint(url) is False
+
+
+# ---- apply-URL normalisation ----
+
+@pytest.mark.parametrize("raw,expected", [
+    # a live Robinhood posting: `t=gh_src=` is an empty value whose content is itself a
+    # parameter name, and Chromium aborted the navigation outright (net::ERR_ABORTED)
+    ("https://boards.greenhouse.io/robinhood/jobs/8240638?t=gh_src=&gh_jid=8240638",
+     "https://boards.greenhouse.io/robinhood/jobs/8240638?gh_jid=8240638"),
+    # gh_jid is kept - some boards need it to select which posting to show
+    ("https://careers.toasttab.com/jobs?gh_jid=7989176",
+     "https://careers.toasttab.com/jobs?gh_jid=7989176"),
+    ("https://x.com/a?utm_source=linkedin&gh_jid=9", "https://x.com/a?gh_jid=9"),
+    ("https://x.com/a", "https://x.com/a"),
+    ("https://x.com/a?t=", "https://x.com/a"),
+])
+def test_apply_url_normalisation(raw, expected):
+    from jobbot.apply.base import normalize_apply_url
+    assert normalize_apply_url(raw) == expected

@@ -66,6 +66,31 @@ class FillResult:
     submitted: bool = False
 
 
+def normalize_apply_url(url: str) -> str:
+    """Strips tracking parameters that can break navigation.
+
+    A live Robinhood posting carried `?t=gh_src=&gh_jid=8240638` - an empty `t` whose value is
+    itself a parameter name. Chromium aborted the navigation outright (net::ERR_ABORTED) and the
+    job could never be opened. Dropping the empty and tracking params loads it fine; gh_jid is
+    kept because some boards need it to select the posting.
+    """
+    if not url or "?" not in url:
+        return url
+    base, _, query = url.partition("?")
+    keep: list[str] = []
+    for part in query.split("&"):
+        if not part or "=" not in part:
+            continue
+        key, _, value = part.partition("=")
+        if not value:                      # empty value, e.g. `t=`
+            continue
+        if key.lower() in {"utm_source", "utm_medium", "utm_campaign", "utm_content",
+                           "utm_term", "t", "src", "ref", "source"}:
+            continue
+        keep.append(f"{key}={value}")
+    return f"{base}?{'&'.join(keep)}" if keep else base
+
+
 def is_submission_endpoint(url: str) -> bool:
     """Whether a POST to this URL represents an actual application submission.
 
@@ -234,15 +259,49 @@ class BaseApplyAdapter:
             return False
 
     def upload_resume(self, selector: str) -> bool:
+        """Attaches the resume, falling back to finding the field by its label.
+
+        The id-based selector only covers the modern boards. Greenhouse's older hosted embed -
+        which is what several companies serve from their own careers domain - names its file
+        inputs `question_2_0_4_0_0` with the label "Resume (required)" nearby, so `#resume`
+        matches nothing and the application goes out with no resume at all.
+        """
         try:
             loc = self.page.locator(selector).first
-            if loc.count() == 0:
+            if loc.count() > 0:
+                loc.set_input_files(str(self.resume_pdf))
+                self.filled["resume"] = self.resume_pdf.name
+                return True
+        except Exception as e:  # noqa: BLE001
+            logger.debug("resume upload via %s failed: %s", selector, e)
+
+        return self._upload_resume_by_label()
+
+    def _upload_resume_by_label(self) -> bool:
+        """Finds the file input whose surrounding text says resume/CV, and not cover letter."""
+        try:
+            index = self.page.evaluate("""() => {
+              const files = Array.from(document.querySelectorAll('input[type=file]'));
+              for (let i = 0; i < files.length; i++) {
+                const el = files[i];
+                const wrap = el.closest('div, fieldset, label, li');
+                const text = ((wrap ? wrap.innerText : '') + ' ' + (el.name || '') + ' ' +
+                              (el.id || '')).toLowerCase();
+                if (/cover\\s*letter/.test(text)) continue;
+                if (/resume|r\\u00e9sum\\u00e9|\\bcv\\b/.test(text)) return i;
+              }
+              // a single file input on an application form is the resume by elimination
+              return files.length === 1 ? 0 : -1;
+            }""")
+            if index is None or index < 0:
+                logger.warning("no resume file input found on this form")
                 return False
-            loc.set_input_files(str(self.resume_pdf))
+            self.page.locator('input[type=file]').nth(index).set_input_files(str(self.resume_pdf))
             self.filled["resume"] = self.resume_pdf.name
+            logger.info("attached resume via label match (file input #%d)", index)
             return True
         except Exception as e:  # noqa: BLE001
-            logger.warning("resume upload failed on %s: %s", selector, e)
+            logger.warning("resume upload by label failed: %s", e)
             return False
 
     def answer_for_label(self, label: str) -> tuple[str | None, bool]:
@@ -324,7 +383,7 @@ class BaseApplyAdapter:
     # ---------- lifecycle ----------
 
     def open(self, apply_url: str) -> None:
-        self.page.goto(apply_url, wait_until="domcontentloaded", timeout=45000)
+        self.page.goto(normalize_apply_url(apply_url), wait_until="domcontentloaded", timeout=45000)
         try:
             self.page.wait_for_load_state("networkidle", timeout=15000)
         except PWTimeout:

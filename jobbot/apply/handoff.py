@@ -18,7 +18,7 @@ from playwright.sync_api import sync_playwright
 
 from .. import config, db, log
 from . import ADAPTERS, resume_for_job
-from .base import NeedsHuman, PostingClosed, screenshot_path_for
+from .base import NeedsHuman, PostingClosed, normalize_apply_url, screenshot_path_for
 
 logger = log.get("apply.handoff")
 
@@ -86,7 +86,8 @@ def prepare_batch(jobs: list[dict[str, Any]], pause: bool = True) -> list[Prepar
                 adapter = adapter_cls(page, profile, resume, mode="REVIEW", job=job)
                 # skip the checks that would abort: the CAPTCHA is exactly why we're here, and
                 # a long form is still worth filling if a human is going to finish it anyway
-                page.goto(job["apply_url"], wait_until="domcontentloaded", timeout=45000)
+                page.goto(normalize_apply_url(job["apply_url"]),
+                          wait_until="domcontentloaded", timeout=45000)
                 try:
                     page.wait_for_load_state("networkidle", timeout=15000)
                 except Exception:  # noqa: BLE001

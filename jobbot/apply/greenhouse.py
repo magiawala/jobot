@@ -20,11 +20,19 @@ logger = log.get("apply.greenhouse")
 class GreenhouseAdapter(BaseApplyAdapter):
     ats = "greenhouse"
 
+    # Greenhouse's older hosted embed (served from a company's own careers domain) uses ids like
+    # `form_legal_first_name_2_0_0` instead of `#first_name`, so each standard field needs a
+    # fallback. Without these, Toast's form filled 3 fields out of 21.
+    STANDARD_FIELDS = (
+        ("first_name", "#first_name, input[id*='first_name'], input[name*='first_name']"),
+        ("last_name", "#last_name, input[id*='last_name'], input[name*='last_name']"),
+        ("email", "#email, input[type=email], input[id*='email']"),
+        ("phone", "#phone, input[type=tel], input[id*='phone']"),
+    )
+
     def fill(self) -> None:
-        self.fill_if_present("#first_name", self.answers.get("first_name") or "", "first_name")
-        self.fill_if_present("#last_name", self.answers.get("last_name") or "", "last_name")
-        self.fill_if_present("#email", self.answers.get("email") or "", "email")
-        self.fill_if_present("#phone", self.answers.get("phone") or "", "phone")
+        for key, selector in self.STANDARD_FIELDS:
+            self.fill_if_present(selector, self.answers.get(key) or "", key)
         self._fill_combobox("#candidate-location", self.answers.get("location") or "", "location")
         self.upload_resume("#resume")
         self._fill_custom_questions()
