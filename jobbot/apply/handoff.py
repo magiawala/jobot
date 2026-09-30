@@ -92,6 +92,7 @@ def prepare_batch(jobs: list[dict[str, Any]], pause: bool = True) -> list[Prepar
                     page.wait_for_load_state("networkidle", timeout=15000)
                 except Exception:  # noqa: BLE001
                     pass
+                adapter.follow_embedded_form()
                 adapter.wait_for_form()
                 adapter.check_posting_open()
                 adapter.fill()

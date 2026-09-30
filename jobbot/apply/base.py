@@ -358,8 +358,15 @@ class BaseApplyAdapter:
             self.unanswered.append(tag)
         # Capture it for one-time human input so the same question never blocks a second time.
         try:
+            from .autolearn import looks_like_option_label
             from .learned import record_pending
 
+            # Greenhouse records each checkbox choice separately, so without this the queue
+            # fills with "Instagram", "Reddit", "Word of mouth" and the like. It was already
+            # filtered during `learn --auto` cleanup; filtering on the way IN keeps the queue
+            # honest in between.
+            if looks_like_option_label(label):
+                return
             record_pending(label, ats=self.ats, options=options, kind=kind, required=required,
                            company=self.job.get("company"), url=self.job.get("url"))
         except Exception as e:  # noqa: BLE001 - learning must never break an application
@@ -388,9 +395,49 @@ class BaseApplyAdapter:
             self.page.wait_for_load_state("networkidle", timeout=15000)
         except PWTimeout:
             pass
+        self.follow_embedded_form()
         self.wait_for_form()
         self.run_safety_checks()
         self.check_form_length()
+
+    def follow_embedded_form(self) -> None:
+        """Navigates into an ATS form that a company embeds in its own careers page.
+
+        Asana and Klaviyo serve the real Greenhouse form from an iframe
+        (job-boards.greenhouse.io/embed/job_app?for=asana&validityToken=...), so the adapter,
+        which works on the main page, saw 9 inputs and 0 file fields at Asana and nothing at all
+        at Klaviyo. Loading the iframe's own URL gives the ordinary form back - 38 inputs,
+        #resume, a submit button - and every existing selector then applies.
+
+        The token is minted per page load, so it has to be read at runtime rather than stored.
+        """
+        try:
+            src = self.page.evaluate("""() => {
+              const f = Array.from(document.querySelectorAll('iframe')).find(x =>
+                /(greenhouse\\.io\\/embed\\/job_app|lever\\.co\\/.*\\/apply|ashbyhq\\.com\\/.*\\/application)/
+                  .test(x.src || ''));
+              return f ? f.src : null;
+            }""")
+        except Exception:  # noqa: BLE001
+            return
+        if not src:
+            return
+
+        # only worth following if the host page isn't already showing the form
+        try:
+            own_inputs = self.page.evaluate(
+                "() => document.querySelectorAll('input:not([type=hidden])').length")
+        except Exception:  # noqa: BLE001
+            own_inputs = 0
+        if own_inputs >= 12:
+            return
+
+        logger.info("following embedded application form: %s", src[:90])
+        self.page.goto(src, wait_until="domcontentloaded", timeout=45000)
+        try:
+            self.page.wait_for_load_state("networkidle", timeout=15000)
+        except PWTimeout:
+            pass
 
     def check_form_length(self) -> None:
         """Bails on forms long enough that they aren't worth the slot.
